@@ -6,7 +6,9 @@ random.seed(7)
 N = int(os.environ.get("N_PER_CLASS", 100))
 ROOT = pathlib.Path("data/images")
 # DeepFakeFace: wiki=real, insight=face-swap (InsightFace), inpainting=SD inpaint, text2img=SD generated
+SUBSETS = os.environ.get("SUBSETS", "real,faceswap,inpainting,text2img").split(",")
 for z, label, subset in [("wiki.zip","real","real"),("insight.zip","fake","faceswap"),("inpainting.zip","fake","inpainting"),("text2img.zip","fake","text2img")]:
+    if subset not in SUBSETS: continue
     out = ROOT/subset; out.mkdir(parents=True, exist_ok=True)
     if len(list(out.glob("*"))) >= N: print("skip", subset); continue
     with RemoteZip(hf_hub_url("OpenRL/DeepFakeFace", z, repo_type="dataset")) as rz:
@@ -15,6 +17,7 @@ for z, label, subset in [("wiki.zip","real","real"),("insight.zip","fake","faces
             (out/(n.replace("/","_"))).write_bytes(rz.read(n))
     print("done", subset, len(list(out.glob('*'))))
 # DFDC sample videos with labels from metadata.json
+if os.environ.get("SKIP_VIDEOS"): raise SystemExit
 V = pathlib.Path("data/videos"); V.mkdir(parents=True, exist_ok=True)
 repo = "191fa07121/deepfake-detection-challenge"
 files = [f for f in HfApi().list_repo_files(repo, repo_type="dataset")]

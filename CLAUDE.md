@@ -52,10 +52,17 @@ Label schemes differ. Always normalize to P(manipulated) = sum of scores whose l
 | Organika__sdxl-detector | Swin | artificial / human | diffusion images |
 | haywoodsloan__ai-image-detector-deploy | SwinV2 | artificial / real | AI-generated images |
 | umm-maybe__AI-image-detector | Swin | artificial / human | AI-generated images |
-Benchmark results per subset: `models/benchmark.json`. Use the best face-deepfake model + best AI-generated model as S1 (report both sub-scores).
+Benchmark results per subset: `models/benchmark.json`.
+
+### ⚠ Benchmark finding (measured 25 Sep, drives the S1 design)
+Off-the-shelf classifiers are near-random on face-swap/inpainting (AUC 0.41–0.62); only AI-generated detectors work on text2img (haywoodsloan 0.93, Organika 0.87).
+A **linear probe on frozen SigLIP embeddings of MediaPipe face crops** (backbone of `prithivMLmods__deepfake-detector-model-v1`, `model.vision_model(...).pooler_output`, StandardScaler + LogisticRegression C=0.1) reaches 5-fold CV AUC **0.83 face-swap / 0.90 inpainting / 0.92 text2img**; the same probe on the haywoodsloan SwinV2 backbone gets **0.87 / 0.88 / 0.95 (overall 0.90, FPR@0.5 19%)** with 239 real vs 238 fake faces (`scripts/probe_experiment.py`). Person D: also try concatenating both embeddings; keep whichever wins on the train split.
+→ **S1 = probe score (primary) + haywoodsloan AI-generated score (secondary sub-score).** Probe is trained in `scripts/eval.py` on the train split only, saved to `models/probe.joblib`.
+→ **Leakage guard:** all fakes are 512² while reals vary in size — ALWAYS face-crop (1.3× landmark box) and resize to 224 before any model. Never feed raw image size/format as a feature. State in limitations: "trained/evaluated on DeepFakeFace; real and fake images come from different sources, so part of the signal may be source/compression domain." Test on team selfies as an out-of-distribution check and show the result honestly.
+→ Class imbalance: choose the operating threshold on the train split for FPR ≤ 10%, not 0.5.
 
 ## Signal specs
-- **S1 classifier + occlusion:** run on face crop (fallback: full image). Heatmap = occlusion sensitivity: 7×7 grid, patch filled with image-mean color, heat = max(0, p_base − p_occluded), batch all 49 crops in one forward pass. Upsample, blur, colormap JET, alpha-blend 45% on the image.
+- **S1 classifier + occlusion:** SigLIP-embedding probe (see benchmark finding) on the 224² face crop (fallback: center crop). Heatmap = occlusion sensitivity: 7×7 grid, patch filled with image-mean color, heat = max(0, p_base − p_occluded), batch all 49 crops in one forward pass. Upsample, blur, colormap JET, alpha-blend 45% on the image.
 - **S2 ELA:** re-save JPEG q=90, abs diff ×15, score = mean ELA inside face vs outside (ratio → sigmoid). Save ELA image.
 - **S3 FFT:** grayscale face crop 256², log-magnitude spectrum, azimuthal average; score from high-frequency energy ratio + periodic peak count vs real baseline (calibrate constants on data/images/real). Save spectrum png.
 - **S4 noise:** residual = img − medianBlur(img,3); compare residual std inside face mask vs background ring; large mismatch → splice/swap. Save residual heat.
