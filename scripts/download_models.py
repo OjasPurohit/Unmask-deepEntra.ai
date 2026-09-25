@@ -10,6 +10,7 @@ MODELS = os.environ.get("MODELS", ",".join([
     "Organika/sdxl-detector",                      # Swin, AI-generated (diffusion)
     "haywoodsloan/ai-image-detector-deploy",       # SwinV2, AI-generated
     "umm-maybe/AI-image-detector",                 # Swin, AI-generated
+    "buildborderless/CommunityForensics-DeepfakeDet-ViT",  # ViT, single sigmoid output; best on generated/inpainted
 ])).split(",")
 for m in MODELS:
     print("->", m)

@@ -14,6 +14,9 @@ Own the **numbers**: train the detector probe, fuse all signals into one calibra
 | prithivMLmods__deepfake-detector-model-v1 (SigLIP, `.vision_model`) | 0.886 | 0.825 | **0.904** | 0.920 | 19% |
 | dima806__deepfake_vs_real_image_detection (ViT) | 0.864 | 0.850 | 0.811 | 0.916 | 20% |
 
+### Update 26 Sep: Omkar's model is the strongest single detector
+`buildborderless/CommunityForensics-DeepfakeDet-ViT` (in `models/`, one sigmoid output = P(manipulated)): AUC **faceswap 0.66 · inpainting 0.99 · text2img 1.00 · FPR@0.5 = 0.3%**. It is weak exactly where the probe is strong (face swaps). **Use both as separate features in fusion**, and report `cf`, `probe` and `fused` AUCs side by side in `per_signal_auc`: that table is our proof that combining signals helps.
+
 ## Data (local only, gitignored; get it from the pen drive or run `scripts/fetch_data.py`)
 - `data/images/real` (350, Wikipedia portraits, varied sizes), `faceswap` / `inpainting` / `text2img` (100 each, all 512×512). Source: OpenRL/DeepFakeFace.
 - `data/videos/real`, `data/videos/fake` (10 each, DFDC sample).

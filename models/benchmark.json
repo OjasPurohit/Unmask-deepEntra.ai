@@ -88,5 +88,20 @@
       "acc@0.5": 0.555
     },
     "fpr@0.5_on_real": 0.37
+  },
+  "buildborderless__CommunityForensics-DeepfakeDet-ViT": {
+    "faceswap": {
+      "auc": 0.663,
+      "acc@0.5": 0.784
+    },
+    "inpainting": {
+      "auc": 0.988,
+      "acc@0.5": 0.944
+    },
+    "text2img": {
+      "auc": 1.0,
+      "acc@0.5": 0.998
+    },
+    "fpr@0.5_on_real": 0.003
   }
 }

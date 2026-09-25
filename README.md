@@ -7,6 +7,7 @@ A multi-signal forensic system that analyzes image/video samples for manipulatio
 
 | Doc | For |
 |---|---|
+| [EXPLAINED.md](EXPLAINED.md) | Start here: the whole project explained from zero |
 | [PLAN.md](PLAN.md) | Strategy, judging map, architecture, timeline, demo script |
 | [CLAUDE.md](CLAUDE.md) | Full technical spec for coding agents (Claude Code / Antigravity via AGENTS.md) |
 | [context/TRAINING_CONTEXT.md](context/TRAINING_CONTEXT.md) | Training / evaluation owner |
