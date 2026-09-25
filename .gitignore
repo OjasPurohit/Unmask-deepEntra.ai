@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+models/*/
+models/*.task
+data/
+!data/.gitkeep
+backend/static/cases/
+backend/store/*.db
+node_modules/
+frontend/dist/
+.DS_Store
