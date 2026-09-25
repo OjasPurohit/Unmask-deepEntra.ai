@@ -1,65 +1,99 @@
 # Kickoff prompts — paste at 12:15 PM
-Each person opens the repo in Antigravity / Claude Code on their own branch and pastes THEIR prompt.
-The agent automatically has CLAUDE.md + PLAN.md; the prompts only add the job.
+One prompt per person. Each opens the repo in Antigravity / Claude Code **on their own branch** and pastes THEIR prompt.
+`AGENTS.md` already points every agent at `CLAUDE.md` + `PLAN.md`; each prompt names the extra context file to read.
+
+| Person | Branch | Context file(s) | Prompts below |
+|---|---|---|---|
+| Ojas | `main`, then `app` | `context/FRONTEND_OJAS_PALASH.md`, `context/ANDROID_APP.md` | 1 (MASTER), 2, 6, 7 |
+| Palash | `ui` | `context/FRONTEND_OJAS_PALASH.md`, `context/ANDROID_APP.md` | 3 |
+| Omkar | `models` | `context/OMKAR_AI_MODELS.md` | 4 |
+| Yadnesh | `backend` | `context/YADNESH_BACKEND.md` | 5 |
 
 ---
-## MASTER (Person A, first 15 min, on `main`) — scaffold so everyone can start in parallel
+## 1. OJAS — MASTER scaffold (12:15, first 15 min, on `main`)
 ```
-Read CLAUDE.md and PLAN.md fully. We have 3 hours. Scaffold the project exactly per the layout in CLAUDE.md:
-1. backend/schemas.py with pydantic models Signal, RegionScore, FrameScore, AnalysisResult, ReviewIn, Case — matching PLAN.md §2 JSON exactly.
-2. backend/app.py FastAPI with all routes from CLAUDE.md "API"; /api/analyze saves the upload to backend/static/cases/<case_id>/, computes sha256, and calls pipeline.analyze_image / analyze_video. Add CORS, static mount, /api/health.
-3. backend/pipeline.py that runs every module in backend/signals/ inside try/except, times each, calls face.py, fusion.py, narrator.py, store.py. Each signal module starts as a stub returning a plausible Signal so the whole flow runs end-to-end now.
-4. frontend/: Vite + React + TS + Tailwind + Recharts + react-router. src/types.ts mirroring schemas.py, src/mock.json with a realistic strong-band face-swap result (include 5 signals, 6 regions, 8 frames), src/api.ts that uses mock when VITE_MOCK=1. Vite proxy /api -> :8000. Empty pages: Analyze, Report, Evaluation, Review.
-5. A root README.md run section: `.venv/Scripts/uvicorn backend.app:app --reload --port 8000` and `cd frontend && npm run dev`.
-Run both servers, verify /api/health and one /api/analyze with a stub returns valid JSON, then commit "scaffold" and push.
+Read CLAUDE.md and PLAN.md fully, plus context/FRONTEND_OJAS_PALASH.md and context/ANDROID_APP.md. We have 3 hours and three people waiting on this scaffold, so build it fast and push.
+1. backend/schemas.py with pydantic models Signal, RegionScore, FrameScore, Review, AnalysisResult, CaseSummary — matching the types.ts block in context/FRONTEND_OJAS_PALASH.md EXACTLY (it is the contract; I own both sides of it).
+2. backend/app.py FastAPI with every route from CLAUDE.md "API": /api/analyze saves the upload to backend/static/cases/<case_id>/, computes sha256, calls pipeline.analyze_image / analyze_video. Plus /api/cases, /api/cases/{id}, /api/cases/{id}/review, /api/cases/{id}/report, /api/metrics, /api/samples, /api/health. CORSMiddleware with allow_origins=["*"], all methods and headers (the Android webview needs it). Mount /static. Every image path in a response must be root-relative "/static/...".
+3. backend/pipeline.py: run face.py then every module in backend/signals/ inside try/except, time each one, then fusion.py, narrator.py, store.py. Each signal module starts as a STUB returning a plausible Signal so the whole flow runs end-to-end right now — Omkar and Yadnesh replace the stubs one file at a time without ever breaking the app. The classifier stub must return details {"cf": ..., "probe": ...} with score = max of the two.
+4. frontend/: Vite + React + TS + Tailwind + Recharts + react-router. src/types.ts mirroring schemas.py; src/api.ts with a single BASE = localStorage veritas_api, else import.meta.env.VITE_API_BASE, else "" — plus an apiUrl(path) helper that EVERY image/static URL goes through; src/mock.json with a realistic strong-band face-swap result (5 signals including classifier details cf/probe, 7 regions, 8 frames); mock used when VITE_MOCK=1. Vite proxy /api -> :8000. Empty routed pages: Analyze, Report, Evaluation, Review, Settings.
+5. README run section: uvicorn backend.app:app --reload --host 0.0.0.0 --port 8000, and cd frontend && npm run dev.
+Run both servers, verify /api/health and one /api/analyze returns valid JSON, then commit "scaffold" and push to main. Tell the team to pull.
+```
+
+## 2. OJAS — frontend (after the scaffold, on `main`)
+```
+Read context/FRONTEND_OJAS_PALASH.md. I own the Evaluation page, Review queue, Settings, the app shell, src/types.ts and src/api.ts. Palash owns the theme, the shared components, Analyze and Report — never edit his files; ask him instead.
+Against src/mock.json and a mock metrics.json:
+1. src/pages/Evaluation.tsx from /api/metrics: metric tiles (Accuracy, Precision, Recall, False positive rate HIGHLIGHTED, AUC), ROC curve, 2x2 confusion matrix, per-subset table, per-signal AUC bars showing cf vs probe vs each forensic signal vs fused, robustness table, failure gallery (image + true label + score + reason), limitations, dataset source note.
+2. src/pages/Review.tsx: cases table (thumb, file, band pill, score, review status), filter by band / unreviewed, click -> report, and the audit trail of decisions.
+3. src/pages/Settings.tsx: backend URL field saved to localStorage under veritas_api, Save / Reset, and a "Test connection" button hitting /api/health that shows models_loaded and device. This is what makes the phone demo survive an unknown venue IP.
+4. App shell + routing + nav (Analyze · Review · Evaluation · Settings, plus the "Human-in-the-loop · Probabilistic" pill), importing Palash's theme and components — do not restyle them.
+Every page must work at 1366x768 AND at 390px. Use Palash's components wherever one exists; if you need a new shared component, ask him rather than adding it to src/components.
+The Android app is P1.5 and comes after the 1:45 checkpoint — do not start it now.
+```
+
+## 3. PALASH — design system, Analyze, Report, mobile (branch `ui`)
+```
+Read CLAUDE.md "Frontend screens", context/FRONTEND_OJAS_PALASH.md and PLAN.md §6 (the demo script). I own the theme, all shared components, the Analyze page and the Evidence Report page. Ojas owns Evaluation, Review, Settings, the app shell, types.ts and api.ts — never edit his files. Build against src/mock.json with VITE_MOCK=1; never wait on the backend.
+FIRST, within 20 minutes, because Ojas imports them: src/theme.ts + src/index.css + Tailwind config. Dark forensic-lab look, background #0b1220, cards #111a2e with 1px #1f2a44 borders, teal accent #14b8a6, Inter, generous spacing.
+THEN the shared components in src/components/: BandBanner (band color + the EXACT wording from CLAUDE.md + disclaimer), ScoreGauge, HeatmapViewer (original + overlay, opacity slider default 60%, side-by-side toggle), RegionChips, SignalCard (score bar, reason, expandable panel image + details, "signal unavailable" when ok=false; on the classifier card also show the cf and probe sub-scores from details), ContributionBars, FrameTimeline (Recharts line; click a point -> that frame's heatmap), LimitationsList, Sha256Badge, ReviewPanel, and Card/Pill/Table primitives.
+THEN src/pages/Analyze.tsx: hero line "Explainable manipulation forensics for identity verification", drag-drop zone, a "Try a sample" gallery from /api/samples (fallback to a mock list), and step progress while waiting: Detecting face -> Running 5 forensic signals -> Fusing evidence -> Writing explanation.
+THEN src/pages/Report.tsx — the demo centrepiece: band banner, gauge, headline, SHA-256 badge with copy, HeatmapViewer, ranked region chips, signal cards, contribution bars, video frame timeline + temporal stats, explanation, robustness, limitations, disclaimer, ReviewPanel, and a Print button with a @media print stylesheet that yields a clean one-page evidence report.
+MOBILE IS A REQUIREMENT, not a nice-to-have: the Android APK wraps this exact build. Every page must be usable at 390px (nav collapses, viewer and slider stack vertically, tables scroll inside their own overflow-x-auto container), and the upload input must be an input type=file with accept="image/*,video/*" and capture so the phone camera opens directly. Build every image src through the apiUrl() helper in api.ts — never a bare "/static/..." path, it breaks inside the Android webview.
+Must also look good at 1366x768 (projector). Commit often.
+```
+
+## 4. OMKAR — detection core + evaluation (branch `models`)
+```
+Read CLAUDE.md (especially "Models", the Benchmark finding, and "Signal specs" S1 + Regions) and context/OMKAR_AI_MODELS.md. You own backend/face.py, backend/signals/classifier.py, backend/fusion.py and the scripts; do not edit other people's files.
+1. backend/face.py: MediaPipe tasks FaceLandmarker (models/face_landmarker.task, IMAGE mode — the legacy mp.solutions API does NOT exist in mediapipe 1.x). Return FaceInfo(box, crop_rgb = 1.3x landmark box resized to 224, landmarks 478x2 px, masks dict for left_eye, right_eye, mouth, nose, jaw_boundary (band along the face oval, +-6% face width), skin (oval minus features) and background, plus a yaw estimate). Fall back to OpenCV Haar + proportional regions if no landmarks, and flag that as a limitation.
+2. backend/signals/classifier.py — S1 has TWO sub-scores:
+   - cf = models/buildborderless__CommunityForensics-DeepfakeDet-ViT on the FULL image (no crop), loaded with function_to_apply="sigmoid"; its single sigmoid output already IS P(manipulated). Measured AUC 0.66 faceswap / 0.99 inpainting / 1.00 text2img at 0.3% FPR.
+   - probe = a linear probe (StandardScaler + LogisticRegression C=0.1, models/probe.joblib) on the frozen haywoodsloan SwinV2 backbone embedding of the 224 face crop. Measured 0.87 / 0.88 / 0.95. Switch the backbone to SigLIP or to both concatenated only if that wins on the train split.
+   - Put both in Signal.details as {"cf": ..., "probe": ...}; they enter fusion as TWO SEPARATE FEATURES. The score shown in the UI is max(cf, probe).
+   - Occlusion heatmap computed on WHICHEVER SUB-SCORE IS HIGHER: 7x7 grid, patch filled with the image-mean color, heat = max(0, p_base - p_occluded), all 49 crops batched in ONE forward pass. Upsample, blur, JET colormap, alpha-blend 45%, save the overlay png. (cf occludes the full image; probe occludes the face crop.)
+   - Also expose predict_batch(list of images) -> list of floats, for Yadnesh's video timeline and for robustness.
+   - Load every model once at startup, local_files_only=True, GPU if available. Target under 2 s/image on GPU, under 8 s on CPU.
+3. region_scores(heat, masks) -> sorted list[RegionScore] plus a headline sentence such as "Suspicion concentrated at jaw boundary — consistent with face-swap blending". That sentence is the centrepiece of the demo, so make it read well.
+4. Then the numbers, per context/OMKAR_AI_MODELS.md: scripts/embed.py, scripts/train_probe.py (fixed stratified 70/30 split, seed 7; threshold chosen on the TRAIN split for FPR <= 10%), scripts/eval.py -> backend/static/metrics.json with exactly the documented keys, backend/fusion.py (LogisticRegression over [cf, probe, ela, fft, noise, metadata] + fixed-weight fallback + band mapping), robustness (JPEG q50 and 50% resize), the 6-case failure gallery, and the team-selfie out-of-distribution check.
+LEAKAGE GUARD: all fakes are 512x512 while reals vary, so ALWAYS face-crop and resize to 224 before any model, and never feed image size or format as a feature.
+Test on 3 images from data/images/real and 3 from data/images/faceswap; print scores, both sub-scores and timings, and save the overlays. Commit.
+```
+
+## 5. YADNESH — forensic signals, video, narrator, store (branch `backend`)
+```
+Read CLAUDE.md "Signal specs" and context/YADNESH_BACKEND.md. You own backend/signals/ela.py, fft.py, noise.py, metadata.py, temporal.py, plus backend/narrator.py, backend/store.py and scripts/calibrate_signals.py; do not edit other people's files. Every module follows the Signal contract in CLAUDE.md and NEVER raises — wrap the body in try/except and return ok=False with the error. `face` may be None; degrade to whole-image statistics and say so in the reason.
+1. ela.py (S2): re-save JPEG q=90, abs diff x15, score = mean ELA inside the face vs outside (ratio -> sigmoid), save the ELA panel png.
+2. fft.py (S3): grayscale face crop at 256x256, log-magnitude spectrum, azimuthal average, score from the high-frequency energy ratio + periodic peak count against a real-image baseline, save the spectrum png.
+3. noise.py (S4): residual = img - medianBlur(img, 3); compare residual std inside the face mask against a background ring; save a residual heat png.
+4. scripts/calibrate_signals.py: compute each raw statistic over data/images/real and each fake subset, print the separation, pick cut-offs so most REAL images score below 0.35, then hard-code the constants with a comment saying where they came from. False positives are the metric the VSS judges care about.
+5. metadata.py (S5): EXIF presence, Software tag (photoshop / gimp / stable diffusion / midjourney / dall-e), missing camera Make/Model, C2PA/JUMBF marker bytes. Low weight; the value is the sentence, not the number. Never conclude from metadata alone.
+6. temporal.py (V1-V3): sample_frames(path, n=16) with timestamps (cv2); per-frame S1 score via classifier.predict_batch -> timeline; blink rate via eye aspect ratio over the landmark sequence (human is roughly 15-20/min; under 5 is a WEAK indicator only, and the reason must say so); landmark jitter = mean frame-to-frame displacement normalized by face width. Video fused score = 0.6*mean(top-25% frames) + 0.4*temporal. Stub Omkar's face.detect and classifier.predict_batch behind a small adapter until the models branch merges.
+7. narrator.py: prompt built from the AnalysisResult JSON ONLY (never the image). 4-6 sentences citing the measured signals and regions, stating the confidence band, mentioning the limitations, ending with the human-review sentence. Banned words: fake, proof, guilty, identity confirmed. Gemini (google-genai) or Claude (anthropic) per .env, 8 s timeout, and a deterministic template fallback that reads well — assume the venue Wi-Fi dies.
+8. store.py: SQLite cases / reviews / audit_log (append-only, timestamped), wired into Ojas's app.py routes, plus the printable HTML report.
+Test on 2 real and 2 fake videos from data/videos and confirm no signal ever raises. Commit.
 ```
 
 ---
-## Person A — Detection core (branch `core`)
+## 6. Integration (1:45 PM · Ojas, on `main` after merging `ui`, `models`, `backend`)
 ```
-Read CLAUDE.md. Implement backend/face.py and backend/signals/classifier.py per the "Signal specs" (S1 + Regions) section.
-- face.py: MediaPipe tasks FaceLandmarker (models/face_landmarker.task, IMAGE mode), return FaceInfo(box, crop_rgb, landmarks 478x2 px, masks dict name->bool array for left_eye, right_eye, mouth, nose, jaw_boundary, skin, background, yaw_estimate). Use FACEMESH index sets from the landmark topology (face oval, eyes, lips, nose). Fallback to OpenCV Haar + proportional regions if no landmarks.
-- classifier.py: per CLAUDE.md "Benchmark finding": SigLIP backbone of models/prithivMLmods__deepfake-detector-model-v1 -> pooler_output embedding of the 224² face crop -> models/probe.joblib (StandardScaler+LogReg, trained by Person D's eval.py; until it exists train a quick one yourself from scripts/probe_experiment.py logic on all data). Secondary sub-score: haywoodsloan AI-generated model (p_fake normalization per CLAUDE.md). Load once, GPU if available. Occlusion heatmap 7x7 batched in a single forward pass. Save overlay png. Return sub-scores in details. Also expose predict_batch(list of images) for video + robustness.
-- regions: function region_scores(heat, masks) -> sorted list[RegionScore] + headline sentence.
-Test on 3 images from data/images/real and 3 from data/images/faceswap; print scores, timing and save overlays. Target < 2 s per image on GPU, < 8 s CPU. Commit.
+All branches are merged into main. Run the backend with --host 0.0.0.0 and the frontend with VITE_MOCK=0. Upload every file in backend/static/samples through /api/analyze and fix errors until each returns a valid AnalysisResult that renders on the Report page (check that the classifier card shows both cf and probe). Then run scripts/eval.py and confirm the Evaluation page renders real metrics. Check every page at 1366x768 and at 390px width. Print a list of anything still stubbed, anything slower than 5 s for an image or 25 s for a video, and any wording that violates the guardrail (fake / proof / guilty / identity confirmed).
 ```
 
-## Person B — Forensic signals + video (branch `signals`)
+## 7. Android APK (2:45 PM · Ojas, branch `app` — only if the 1:45 checkpoint passed)
 ```
-Read CLAUDE.md. Implement backend/signals/ela.py, fft.py, noise.py, metadata.py, temporal.py exactly per "Signal specs", each following the Signal contract and never raising.
-- Calibrate ELA/FFT/noise constants: write scripts/calibrate_signals.py that computes raw statistics over data/images/real and each fake subset and prints the separation; pick thresholds so real images mostly score < 0.35. Hard-code the chosen constants with a comment.
-- Each signal saves a visual panel png (ELA map, log spectrum with azimuthal plot, noise residual heat) to case_dir.
-- temporal.py: sample_frames(path, n=16) with timestamps; blink_rate(landmark sequence) via eye aspect ratio; jitter(landmark sequence). Use face.py and classifier.predict_batch from Person A (stub them if not merged yet).
-Test on 2 real + 2 fake videos from data/videos. Commit.
-```
-
-## Person C — Frontend (branch `ui`)
-```
-Read CLAUDE.md "Frontend screens" and PLAN.md §6 demo script. Build all 4 screens in frontend/ against src/mock.json (VITE_MOCK=1), polished enough to demo to judges.
-Dark forensic-lab look, teal accent #14b8a6, Inter font, cards with subtle borders. Components: BandBanner (color by band + exact wording + disclaimer), ScoreGauge, HeatmapViewer (original/overlay with opacity slider and side-by-side toggle), RegionChips, SignalCard (score bar, reason, panel image, expandable details), ContributionBars, FrameTimeline (Recharts line; click point -> show that frame's heatmap), LimitationsList, Sha256Badge, ReviewPanel (agree/disagree/needs_more + note), EvalDashboard (metric tiles, ROC curve, confusion matrix, per-subset table, robustness table, failure gallery), ReviewQueue table.
-Analyze page: drag-drop + "Try a sample" gallery reading /api/samples (fallback to mock list) + step progress (Detecting face → Running 5 forensic signals → Fusing evidence → Writing explanation).
-Report page must have a print stylesheet so browser Print -> PDF gives a clean evidence report.
-Every screen must look good at 1366x768 (projector). Commit often.
+Read context/ANDROID_APP.md. Wrap the existing frontend build into an Android APK with Capacitor — no separate native codebase, and no model on the phone.
+1. cd frontend && npm i @capacitor/core @capacitor/cli @capacitor/android && npx cap init "Veritas Lens" ai.veritaslens.app --web-dir dist
+2. capacitor.config.ts: appId ai.veritaslens.app, appName "Veritas Lens", webDir 'dist', server: { cleartext: true }. Also set android:usesCleartextTraffic="true" on the <application> element in android/app/src/main/AndroidManifest.xml — the backend is plain http on the LAN and Android blocks it otherwise.
+3. Confirm the backend has CORS allow_origins=["*"] and runs with --host 0.0.0.0, and that the Windows firewall allows inbound TCP 8000: New-NetFirewallRule -DisplayName "Veritas 8000" -Direction Inbound -LocalPort 8000 -Protocol TCP -Action Allow. Get the laptop LAN IP with ipconfig.
+4. frontend/.env.production: VITE_API_BASE=http://<laptop-LAN-IP>:8000
+5. npm run build, then npx cap add android, npx cap sync android, then cd android and .\gradlew assembleDebug
+6. APK lands at android/app/build/outputs/apk/debug/app-debug.apk — install with adb install -r, or copy the file to the phone and tap it.
+Verify on the phone: the Settings page can change the backend URL at runtime, the camera opens from the upload button, one real image goes end-to-end, and the case appears in the review queue on the laptop. If the build fails, stop at 3:00 and use the fallback (the web app in the phone browser at the laptop IP) — do not let this eat demo-rehearsal time.
 ```
 
-## Person D — Eval, fusion, narrator, store (branch `eval`)
+## 8. Polish (3:00 PM · everyone, on `main`)
 ```
-Read CLAUDE.md and PLAN.md §5. Implement:
-1. scripts/eval.py: run the full pipeline (backend.pipeline) over data/images/* (label real=0, others=1) with a fixed 70/30 stratified split. On train split FIRST fit the S1 SigLIP probe (save models/probe.joblib; see CLAUDE.md benchmark finding + scripts/probe_experiment.py), then fit backend/fusion.py LogisticRegression on signal score vectors (save models/fusion.json with coefs + intercept). On test split compute: accuracy, precision, recall, FPR, FNR, ROC-AUC, ROC points, confusion matrix, per-subset metrics, each single signal's AUC vs fused AUC, robustness (JPEG q50 + 50% resize) metrics, threshold that gives FPR<=5%, and the 6 worst errors (store paths + scores + auto reason) as failure gallery. Also run over data/videos. Write backend/static/metrics.json. Cache per-image signal vectors to data/cache.json so re-runs are fast.
-2. backend/fusion.py: load models/fusion.json; fused prob + per-signal contribution (coef*x); fallback fixed weights if file missing; band mapping per CLAUDE.md.
-3. backend/narrator.py: build prompt from the AnalysisResult JSON only (no image), instruct: 4-6 sentences, cite measured signals and regions, state confidence band, mention limitations, never use words fake/proof/guilty/identity confirmed, end with human-review sentence. Gemini (google-genai) or Claude (anthropic) per .env, 8 s timeout, template fallback that produces a good paragraph deterministically.
-4. backend/store.py: SQLite cases/reviews/audit_log; endpoints wiring with Person A's app.py.
-5. /api/samples: list curated hero samples in backend/static/samples/ (copy 2 real, 2 faceswap, 1 inpainting, 1 text2img, 1 fake video, plus 1 known failure case chosen from eval).
-Commit.
-```
-
----
-## Integration prompt (1:45 PM, on `main` after merging branches)
-```
-Merge state is on main. Run backend and frontend with VITE_MOCK=0. Upload each file in backend/static/samples through /api/analyze, fix every error until all return valid AnalysisResult and render on the Report page. Then run scripts/eval.py and make sure the Evaluation page renders real metrics. List anything still stubbed.
-```
-
-## Polish prompt (2:45 PM)
-```
-We freeze at 3:30. Walk the demo script in PLAN.md §6 end-to-end in the browser. Fix anything slow (>5 s image, >25 s video), ugly at 1366x768, or wording that violates the guardrail. Pre-analyze all hero samples at startup so the demo is instant. Do not add features.
+We freeze at 3:30. Walk the demo script in PLAN.md §6 end-to-end in the browser AND once on the phone. Fix anything slow (over 5 s for an image, over 25 s for a video), anything ugly at 1366x768 or 390px, and any wording that violates the guardrail. Pre-analyze all hero samples at startup so the demo is instant. Record the 90-second backup screen capture. Do not add features.
 ```

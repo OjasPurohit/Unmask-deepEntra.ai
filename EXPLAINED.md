@@ -7,7 +7,7 @@ This document assumes you know nothing. Read it top to bottom once and you'll un
 ## 1. The 30-second version
 - **Event:** deepEntra Build Fest 2026, a one-day AI hackathon in Pune (26 Sep 2026). Teams of 2–4 pick a problem, build a working AI prototype in about 3 hours, and demo it to judges.
 - **Our problem (CYB-03):** detect whether a photo or video of a person has been manipulated (deepfakes, face swaps, AI-generated faces), and **explain where and why** it looks suspicious, with honest confidence levels and a human making the final call.
-- **Our product:** **Veritas Lens**. You upload a photo or video. It runs several independent "forensic tests", paints a heatmap over the suspicious part of the face, explains in plain English what it found, gives a confidence level, and sends the case to a human reviewer. It also has a scoreboard page showing how accurate it is, including where it fails.
+- **Our product:** **Veritas Lens**, in the browser and as an Android app. You upload a photo or video. It runs several independent "forensic tests", paints a heatmap over the suspicious part of the face, explains in plain English what it found, gives a confidence level, and sends the case to a human reviewer. It also has a scoreboard page showing how accurate it is, including where it fails.
 - **Why we can win:** most teams will show "a model that says 87% fake". We show *where* on the face, *why*, *how sure*, *how often we're wrong*, and *who decides*. That matches every line of the problem statement and every scoring criterion.
 
 ---
@@ -95,6 +95,12 @@ VSS admits students through applications, documents and interviews. A face-swapp
    - A plain-English explanation, a list of limitations, a **SHA-256 fingerprint** of the file, the disclaimer, review buttons, and a Print button that produces a PDF report.
 3. **Evaluation page:** our honest scoreboard. Accuracy, false-positive rate, a ROC curve, a confusion matrix, per-type results, robustness tests and a failure gallery.
 4. **Review queue:** every analysed case, its band and the reviewer's decision, with a full audit trail.
+5. **Settings:** one field to point the app at the verification machine (the laptop running the models). Only really needed on the phone, where the network address changes with the venue.
+
+### 4.1 The phone app
+The same product also installs on an **Android phone** as an app called Veritas Lens. It is not a second app: a tool called **Capacitor** wraps the exact same React build into an APK. An admissions officer can photograph or pick an applicant photo on the phone and get the same evidence report.
+
+**The AI does not run on the phone.** The phone sends the file to the verification laptop over the local Wi-Fi (or the phone's own hotspot), the laptop runs the models and sends back the result. That keeps the ~5 GB of models and the case database on one controlled machine, keeps the phone fast, and means the audit trail lives in one place. Details: `context/ANDROID_APP.md`.
 
 ---
 
@@ -103,6 +109,7 @@ VSS admits students through applications, documents and interviews. A face-swapp
 ### 5.1 Big picture
 ```
 Browser (React UI)  ──upload──►  Backend server (Python, FastAPI)
+  or Android app                     (the "verification machine" — models live here)
                                    1. Fingerprint the file (SHA-256)
                                    2. Find the face (MediaPipe)
                                    3. Run 5 forensic signals ─► each gives score + heatmap + reason
@@ -112,9 +119,9 @@ Browser (React UI)  ──upload──►  Backend server (Python, FastAPI)
                                    7. Save the case for human review (SQLite)
 Browser  ◄──JSON result + images──┘
 ```
-- **Frontend** = what you see in the browser. Built with React (UI library), TypeScript (JavaScript with types), Tailwind (styling), Recharts (graphs).
+- **Frontend** = what you see in the browser. Built with React (UI library), TypeScript (JavaScript with types), Tailwind (styling), Recharts (graphs). The Android app is this same frontend packaged by Capacitor; it just points at the laptop's address on the local network instead of at localhost.
 - **Backend** = the Python program doing the analysis. FastAPI turns Python functions into web addresses such as `/api/analyze`.
-- **API contract** = the agreed exact format of the data the backend sends to the frontend. We fixed it in advance (`context/FRONTEND_CONTEXT.md`) so both halves can be built at the same time without waiting on each other.
+- **API contract** = the agreed exact format of the data the backend sends to the frontend. We fixed it in advance (`context/FRONTEND_OJAS_PALASH.md`) so both halves can be built at the same time without waiting on each other.
 
 ### 5.2 Step 1: SHA-256 fingerprint
 A mathematical fingerprint of the file. Change one pixel and the fingerprint changes completely. It proves the file the reviewer sees is exactly the file that was analysed, a basic idea in handling digital evidence ("chain of custody"). Cheap to add, and security judges like it.
@@ -129,7 +136,7 @@ Think of these as five different experts looking at the same photo. Each says "h
 
 | # | Signal | Plain explanation | What it catches |
 |---|---|---|---|
-| S1 | **AI classifier** (two parts: `cf` and `probe`) | Neural networks trained to tell real from manipulated faces. The heatmap comes from **occlusion**: we cover small squares of the face one at a time and watch how the AI's score changes. If covering the jawline makes the score drop a lot, the jawline is where the AI saw the problem. | All three types; this is our strongest signal. |
+| S1 | **AI classifier** — two sub-scores. `cf`: the CommunityForensics model reading the **whole image** (one number = the probability it was manipulated). `probe`: our own small classifier trained on top of a big model's understanding of the **cropped face**. The suspicion we show is the higher of the two, and both go into the fusion step separately. The heatmap comes from **occlusion**: we cover small squares one at a time and watch how the score changes. If covering the jawline makes the score drop a lot, the jawline is where the AI saw the problem. | All three types; `cf` is strongest on generated and inpainted images, `probe` on face swaps. Together they are our strongest signal. |
 | S2 | **Error Level Analysis (ELA)** | Re-save the JPEG and compare it with the original. Areas edited after the original save compress differently and "glow". | Pasted or edited regions. |
 | S3 | **Frequency analysis (FFT)** | Convert the image into its "frequency fingerprint" (like turning sound into bass/treble). AI generators leave unnatural repeating patterns there. | AI-generated images. |
 | S4 | **Noise consistency** | Every camera leaves fine grain ("noise"). If the face's grain differs from the background's, the face probably came from somewhere else. | Face swaps, splicing. |
@@ -140,7 +147,7 @@ For **videos** we sample up to 16 frames, run the classifier on each (the **time
 We also run a **robustness check**: re-score the image after heavy compression and shrinking. If the score collapses, we warn that the result is fragile.
 
 ### 5.5 Step 4: fusion (combining the experts)
-Five scores become one number using **logistic regression**, a simple, explainable formula that learns from our test data how much to trust each signal. Because it's simple we can show **each signal's contribution** ("the classifier added +31%, noise added +9%…").
+Six numbers (S1 contributes two, `cf` and `probe`, plus ELA, FFT, noise and metadata) become one score using **logistic regression**, a simple, explainable formula that learns from our test data how much to trust each signal. Because it's simple we can show **each signal's contribution** ("the face-crop probe added +31%, noise added +9%…").
 
 ### 5.6 Step 5: confidence bands
 | Final score | Band | What the reviewer is told |
@@ -179,6 +186,9 @@ Cases go into a queue. A reviewer clicks agree / disagree / needs more evidence 
 | **Data leakage** | When a model learns an accidental shortcut instead of the real thing. See 7.3; we guard against it. |
 | **Out-of-distribution** | Images unlike the training data (e.g. our own selfies). The honest way to show limits. |
 | **Ensemble / fusion** | Combining several models or signals so one's weakness is covered by another's strength. |
+| **Capacitor** | A tool that packages a normal web app into a real Android (or iOS) app, so one codebase ships to both. |
+| **APK** | The installable file format of an Android app. |
+| **LAN** | The local network (the Wi-Fi in the room). Our phone app talks to the laptop over it, never over the internet. |
 | **GPU / CUDA** | Graphics card used to run AI fast. Ojas's laptop has an RTX 5050, and the code also runs (slower) on CPU. |
 
 ---
@@ -214,10 +224,14 @@ Cases go into a queue. A reviewer clicks agree / disagree / needs more evidence 
 
 ### 7.4 Team setup (GitHub repo)
 - Repo: https://github.com/OjasPurohit/DeepEntra-Build-Fest-Masons-CYB-03
-- `TEAM_SETUP.md`: one-line install for teammates plus GitHub login steps.
-- `context/TRAINING_CONTEXT.md`: everything the training/evaluation teammate needs.
-- `context/FRONTEND_CONTEXT.md`: everything the UI teammate needs, including the exact data format.
-- `KICKOFF_PROMPTS.md`: ready prompts to paste into Claude Code / Antigravity at 12:15.
+- `TEAM_SETUP.md`: one-line install for teammates, GitHub login steps, and the Android toolchain (JDK 21 + Android Studio) that Ojas and Palash install before the event.
+- One briefing file per person, so each agent gets exactly the context its owner needs:
+  - `context/OMKAR_AI_MODELS.md` — Omkar: face detection, S1 (`cf` + `probe`), occlusion heatmap, probe training, fusion, evaluation.
+  - `context/YADNESH_BACKEND.md` — Yadnesh: ELA, FFT, noise, metadata, video/temporal, narrator, case store.
+  - `context/FRONTEND_OJAS_PALASH.md` — Ojas and Palash: the exact data format plus a file-by-file ownership split so they never edit the same file.
+  - `context/ANDROID_APP.md` — Ojas and Palash: the Capacitor Android app.
+- `KICKOFF_PROMPTS.md`: one ready prompt per person to paste into Claude Code / Antigravity at 12:15, plus the integration, APK and polish prompts.
+- `PLAN.md` §3.1 has a file → owner table covering every backend and frontend file.
 - Omkar's branch `omkar/deepfake-detector` holds his model-comparison scripts and 11 test images.
 
 ---
@@ -231,7 +245,7 @@ Cases go into a queue. A reviewer clicks agree / disagree / needs more evidence 
 | `AGENTS.md` | Tells Antigravity to read CLAUDE.md and PLAN.md. |
 | `KICKOFF_PROMPTS.md` | Copy-paste prompts per person for 12:15, 1:45 and 2:45. |
 | `TEAM_SETUP.md` | How teammates install tools and get the code. |
-| `context/` | One briefing file per teammate role. |
+| `context/` | One briefing file per person: `OMKAR_AI_MODELS.md`, `YADNESH_BACKEND.md`, `FRONTEND_OJAS_PALASH.md`, `ANDROID_APP.md`. |
 | `requirements.txt` | Python libraries list. |
 | `scripts/setup.ps1` | One-command laptop setup. |
 | `scripts/download_models.py` | Downloads all models. |
@@ -240,19 +254,21 @@ Cases go into a queue. A reviewer clicks agree / disagree / needs more evidence 
 | `scripts/probe_experiment.py` | The face-crop probe experiment (Finding 2). |
 | `models/`, `data/`, `.venv/` | Big local folders, **not on GitHub** (too large, third-party data). Share by pen drive. |
 | `backend/`, `frontend/` | Don't exist yet. Built today from 12:15. |
+| `frontend/android/` | The Capacitor Android project, generated by `npx cap add android` after 1:45. |
 
 ---
 
 ## 9. Who does what today
-| Person | Role | Builds | Briefing |
-|---|---|---|---|
-| A | Detection core | face finding, regions, S1 classifier + heatmap | `CLAUDE.md` + KICKOFF (A) |
-| B | Forensic signals + video | S2 ELA, S3 FFT, S4 noise, S5 metadata, video timeline, blink, jitter | `CLAUDE.md` + KICKOFF (B) |
-| C | Frontend / UI | all 4 screens, first on fake "mock" data, then live | `context/FRONTEND_CONTEXT.md` |
-| D | Training / evaluation | probe training, fusion, metrics, failure gallery, narrator, demo samples | `context/TRAINING_CONTEXT.md` |
-With 3 people, A also does B's work. With 2, drop S4 noise and landmark jitter.
+| Person | Role | Builds | Branch | Briefing |
+|---|---|---|---|---|
+| **Ojas** | Team lead / architect · frontend · Android | The 12:15 scaffold everyone else builds on (schemas, routes, pipeline with stubs, Vite skeleton), then the Evaluation page, Review queue, Settings and app shell, plus **the Android app**. Merges every branch at the checkpoints, runs integration testing, presents at 11:00 and leads the 4:00 demo. | `main` + `app` | `context/FRONTEND_OJAS_PALASH.md` + `context/ANDROID_APP.md` |
+| **Palash** | Frontend · Android UI | The design system and shared components (which Ojas imports, so they come first), the **Analyze page**, the **Evidence Report page** (the demo centrepiece), and the mobile layout + camera flow the Android app uses. | `ui` | `context/FRONTEND_OJAS_PALASH.md` + `context/ANDROID_APP.md` |
+| **Omkar** | AI models | Face detection and region masks (`face.py`), the S1 classifier with both sub-scores and the occlusion heatmap (`classifier.py`), probe training, fusion, the evaluation numbers, robustness and the failure gallery. | `models` | `context/OMKAR_AI_MODELS.md` |
+| **Yadnesh** | Backend · ML | The four classic forensic signals (ELA, FFT, noise, metadata) and their calibration, the video pipeline (frames, blink rate, jitter), the AI narrator with its offline fallback, and the SQLite case store with the audit log. | `backend` | `context/YADNESH_BACKEND.md` |
 
-**Git workflow:** each person works on their own branch (`core`, `signals`, `ui`, `eval`) and merges into `main` at the checkpoints (1:45, 2:45, 3:15). Working separately avoids overwriting each other's work.
+Down a person: Omkar absorbs the noise and metadata signals, Ojas absorbs the video pipeline. Down two: drop noise, landmark jitter and the Android app.
+
+**Git workflow:** each person works on their own branch and merges into `main` at the checkpoints (1:45, 2:45, 3:15). `PLAN.md` §3.1 lists every backend and frontend file with its owner, so two people never edit the same file. The one contract both halves depend on — `backend/schemas.py` and `frontend/src/types.ts` — is owned by Ojas alone.
 
 ---
 
@@ -261,27 +277,33 @@ With 3 people, A also does B's work. With 2, drop S4 noise and landmark jitter.
 |---|---|
 | 10:00–11:00 | Laptops set up, models load offline, `.env` has an API key. |
 | 11:00 | Present the plan (deck). |
-| 12:15–12:30 | Person A pastes the MASTER prompt, creates the skeleton, pushes. Everyone pulls. |
+| 12:15–12:30 | Ojas pastes the MASTER prompt, creates the skeleton, pushes. Everyone pulls. |
 | 12:30–1:45 | Everyone builds their part in parallel. The UI uses mock data. |
-| **1:45 checkpoint** | An image goes end-to-end: upload → real report on screen. **If not, cut S4/S5 and keep going.** |
-| 1:45–2:45 | Video, evaluation run, fusion, narrator, review queue. |
-| 2:45–3:15 | Polish, prepare demo samples, **record a 90-second backup video of the demo**. |
+| **1:45 checkpoint** | An image goes end-to-end: upload → real report on screen. **If not, cut noise/metadata and keep going.** |
+| 1:45–2:45 | Video, evaluation run, fusion, narrator, review queue. **The Android build starts here, and only if the checkpoint passed.** |
+| 2:45–3:00 | APK rebuilt from the merged code, installed on the demo phone, one real analysis run end-to-end. **APK frozen at 3:00.** |
+| 2:45–3:15 | Polish, prepare demo samples, **record a 90-second backup video of the demo** (including the phone beat). |
 | **3:30** | Freeze. Rehearse the demo twice with a timer. |
 | 4:00 | Demo. |
 
 **Must-have (P0):** image upload, S1 with heatmap, ELA, FFT, regions, confidence band, report, evaluation page with real numbers.
 **Should-have (P1):** video, noise, metadata, narrator, review queue, robustness.
+**P1.5 — the Android APK:** started only after the 1:45 checkpoint passes, targeted for 3:00. It is a 30-second demo beat, not something anything else depends on; if it slips we show the web app in the phone's browser instead and lose nothing.
 **Nice-to-have (P2):** live webcam check, content credentials, PDF export.
 
 ---
 
 ## 11. The 4-minute demo
 1. **Hook (20 s):** "VSS admits students through applications and interviews. A face-swapped ID photo or an AI-generated profile defeats that in seconds."
-2. **Real photo (40 s):** green, every signal calm. "We don't cry wolf."
-3. **Face swap (60 s):** red, heatmap on the jawline, region chips, ELA and frequency panels, plain-English explanation, SHA-256.
-4. **Video (40 s):** the timeline spikes; click the spike to see that frame's heatmap; low blink rate noted.
-5. **Evaluation (50 s):** real numbers, false-positive rate, the "combining helps" table, and **a case we get wrong**: "this is exactly why the system never decides alone."
-6. **Review (30 s):** the reviewer disagrees and adds a note; the audit log records it. Close with the guardrails and the next step: a pilot at the VSS admissions desk.
+2. **Real photo (35 s):** green, every signal calm. "We don't cry wolf."
+3. **Face swap (55 s):** red, heatmap on the jawline, region chips, ELA and frequency panels, plain-English explanation, SHA-256.
+4. **Video (35 s):** the timeline spikes; click the spike to see that frame's heatmap; low blink rate noted.
+5. **Phone (30 s):** "a VSS admissions officer verifies an applicant photo from a phone" — open the Veritas Lens app, upload or photograph, the band and heatmap appear on the phone, and the case lands in the review queue on the projector. Say the line: *the models never leave the verification machine; the phone is just a secure client.*
+6. **Evaluation (45 s):** real numbers, false-positive rate, the "combining helps" table, and **a case we get wrong**: "this is exactly why the system never decides alone."
+7. **Review (20 s):** the reviewer disagrees and adds a note; the audit log records it. Close with the guardrails and the next step: a pilot at the VSS admissions desk.
+
+If the APK is not ready, beat 5 becomes the same web app opened in the phone's browser at the laptop's address. Same story, same 30 seconds.
+
 
 ---
 
@@ -291,7 +313,8 @@ With 3 people, A also does B's work. With 2, drop S4 noise and landmark jitter.
 - **"What if it's wrong?"** It will be sometimes. That's why there's a failure gallery, confidence bands, an "inconclusive" zone, and a human who always decides.
 - **"Could your model be cheating?"** We found a real leakage risk (image size) and removed it by cropping faces. Our limitations section also says the real and fake data come from different sources, and we checked our own selfies as out-of-distribution samples.
 - **"Why use an LLM at all?"** Only to *explain* measured evidence in plain language for non-technical staff. It never sees the image and never decides.
-- **"Privacy?"** Everything runs locally. The images never leave the machine (the narrator gets numbers only). SHA-256 gives integrity.
+- **"Does the AI run on the phone?"** No — and deliberately. The phone app is a **secure client**: it uploads the file to the verification machine over the local network and displays the result. The models (about 5 GB) and the case database stay on that one controlled machine. Three reasons: **privacy and governance** — applicant photos and the audit trail live in one place an institution can secure and inspect, not scattered across staff phones; **speed** — a GPU laptop returns a full multi-signal analysis in a couple of seconds where a phone would take far longer, if it could load the models at all; and **consistency** — everyone is scored by the same model version, so the evaluation numbers on our dashboard actually describe what the phone shows.
+- **"Privacy?"** Everything runs locally on the verification machine. The images never leave it (the narrator gets numbers only), and the phone app talks to it over the local network, not the internet. SHA-256 gives integrity.
 - **"What's next?"** A pilot at the VSS admissions desk, more training data (FaceForensics++, Celeb-DF), live interview liveness checks, and C2PA content-credential verification.
 
 ---
@@ -300,6 +323,8 @@ With 3 people, A also does B's work. With 2, drop S4 noise and landmark jitter.
 - [ ] Laptops charged, chargers, extension board, phone hotspot, college ID.
 - [ ] Teammates have the tools installed and the repo cloned (`TEAM_SETUP.md`).
 - [ ] `models/` and `data/` copied to teammates (pen drive).
+- [ ] Ojas and Palash have the Android toolchain working (JDK 21, Android Studio SDK, `adb devices` sees a phone, a throwaway Capacitor app built to an APK) — `TEAM_SETUP.md` §4.
+- [ ] Demo phone charged, USB cable packed, "install unknown apps" allowed.
 - [ ] `.env` has a Gemini or Claude API key, tested.
 - [ ] 11:00 AM deck ready: problem → VSS impact → architecture → research findings table → evaluation plan → guardrails → build plan.
 - [ ] Everyone has read their briefing file.
