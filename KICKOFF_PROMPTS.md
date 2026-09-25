@@ -78,7 +78,15 @@ Test on 2 real and 2 fake videos from data/videos and confirm no signal ever rai
 ---
 ## 6. Integration (1:45 PM · Ojas, on `main` after merging `ui`, `models`, `backend`)
 ```
-All branches are merged into main. Run the backend with --host 0.0.0.0 and the frontend with VITE_MOCK=0. Upload every file in backend/static/samples through /api/analyze and fix errors until each returns a valid AnalysisResult that renders on the Report page (check that the classifier card shows both cf and probe). Then run scripts/eval.py and confirm the Evaluation page renders real metrics. Check every page at 1366x768 and at 390px width. Print a list of anything still stubbed, anything slower than 5 s for an image or 25 s for a video, and any wording that violates the guardrail (fake / proof / guilty / identity confirmed).
+Integration checkpoint. Read CLAUDE.md and PLAN.md (§3.1 file ownership).
+1. MERGE: git fetch origin, make sure main is clean, then merge origin/models, origin/backend and origin/ui into main one at a time. On conflict: the file owner in PLAN.md §3.1 wins; for schemas.py / types.ts (the contract, owned by Ojas) keep main's version and adapt the other code to it. Never delete someone's work to make a merge pass. Report every conflict you resolved.
+2. RUN: start the backend (.venv/Scripts/uvicorn backend.app:app --host 0.0.0.0 --port 8000) and the frontend with VITE_MOCK=0. Fix startup errors first.
+3. END-TO-END: upload every file in backend/static/samples (or 2 images from data/images/real and 2 from data/images/faceswap if samples don't exist yet) through /api/analyze. Fix errors until each returns a valid AnalysisResult that renders fully on the Report page: band banner, heatmap overlay, region chips, all signal cards (classifier card shows cf and probe), explanation, limitations, SHA-256, disclaimer. A failing signal must show as "unavailable", never crash the page.
+4. EVALUATION: if scripts/eval.py exists, check backend/static/metrics.json is present and the Evaluation page renders real numbers. Don't re-run a long eval unless metrics.json is missing.
+5. VIDEO: upload one video from data/videos and check the frame timeline renders.
+6. CHECK: every page at 1366x768; timings (image < 5 s, video < 25 s); grep user-facing text in frontend and backend for guardrail violations (fake / proof / guilty / identity confirmed).
+7. REPORT: a short list of what works, what's still a stub, and who owns each remaining problem (per PLAN.md §3.1). Then commit "integration checkpoint <time>" and push main.
+Only fix what's needed to make the merged app run. Don't add features.
 ```
 
 ## 7. Android APK (2:45 PM · Ojas, branch `app` — only if the 1:45 checkpoint passed)
