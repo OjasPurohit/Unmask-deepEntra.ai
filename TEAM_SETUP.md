@@ -23,3 +23,8 @@ Faster: copy `models\` and `data\` folders from Ojas's pen drive instead of down
 
 ## 4. Git workflow tomorrow
 Own branch per person (`core`, `signals`, `ui`, `eval`). Merge into `main` at 1:45, 2:45, 3:15. Pull `main` right after each merge.
+
+## 5. Your Antigravity context file
+- Training / evaluation owner → `context/TRAINING_CONTEXT.md`
+- Frontend / UI owner → `context/FRONTEND_CONTEXT.md`
+- Everyone → `CLAUDE.md` + `PLAN.md` (AGENTS.md points agents to them automatically)

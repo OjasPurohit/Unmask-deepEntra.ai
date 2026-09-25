@@ -79,6 +79,7 @@ A **linear probe on frozen SigLIP embeddings of MediaPipe face crops** (backbone
 - Disclaimer on every result/report: "Probabilistic forensic indicators only. Not proof of identity, authenticity or wrongdoing. Final decision rests with a human reviewer."
 
 ## API (contract; frontend mocks from `frontend/src/mock.json` until backend is live)
+**Authoritative field list = the `types.ts` block in `context/FRONTEND_CONTEXT.md`; `backend/schemas.py` must mirror it. metrics.json shape = `context/TRAINING_CONTEXT.md` step 3.**
 - `POST /api/analyze` multipart `file` → AnalysisResult (see PLAN.md §2 for JSON shape)
 - `GET /api/cases` · `GET /api/cases/{id}` · `POST /api/cases/{id}/review {decision: agree|disagree|needs_more, note}`
 - `GET /api/metrics` → metrics.json · `GET /api/cases/{id}/report` → printable HTML
