@@ -1,5 +1,8 @@
 # Brief for ChatGPT: write the content for our hackathon pitch deck
 
+> **⚠ SCOPE (26 Sep): Unmask is IMAGE-ONLY KYC identity-photo screening → face heatmap → KYC Verification Evidence Report. All video features below are REMOVED.**
+
+
 > **How to use:** paste this whole file into ChatGPT, then send: *"Write the slide content following this brief."*
 
 ---

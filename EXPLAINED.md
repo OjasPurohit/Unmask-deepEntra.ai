@@ -1,5 +1,8 @@
 # Unmask: the whole project explained from zero
 
+> **⚠ SCOPE (26 Sep): Unmask is IMAGE-ONLY KYC identity-photo screening → face heatmap → KYC Verification Evidence Report. All video features below are REMOVED.**
+
+
 This document assumes you know nothing. Read it top to bottom once and you'll understand the event, the problem, our solution, every technical idea behind it, what's already done, and exactly what happens today.
 
 ---
@@ -297,7 +300,7 @@ Down a person: Omkar absorbs the noise and metadata signals, Ojas absorbs the vi
 1. **Hook (20 s):** "VSS admits students through applications and interviews. A face-swapped ID photo or an AI-generated profile defeats that in seconds."
 2. **Real photo (35 s):** green, every signal calm. "We don't cry wolf."
 3. **Face swap (55 s):** red, heatmap on the jawline, region chips, ELA and frequency panels, plain-English explanation, SHA-256.
-4. **Video (35 s):** the timeline spikes; click the spike to see that frame's heatmap; low blink rate noted.
+4. **ID card (35 s):** a scanned ID card; the face on the card is found, the heatmap shows the suspicious area, then open the printable KYC evidence report.
 5. **Phone (30 s):** "a VSS admissions officer verifies an applicant photo from a phone" — open the Unmask app, upload or photograph, the band and heatmap appear on the phone, and the case lands in the review queue on the projector. Say the line: *the models never leave the verification machine; the phone is just a secure client.*
 6. **Evaluation (45 s):** real numbers, false-positive rate, the "combining helps" table, and **a case we get wrong**: "this is exactly why the system never decides alone."
 7. **Review (20 s):** the reviewer disagrees and adds a note; the audit log records it. Close with the guardrails and the next step: a pilot at the VSS admissions desk.

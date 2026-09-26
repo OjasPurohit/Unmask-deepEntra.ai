@@ -2,9 +2,16 @@
 Hackathon: deepEntra Build Fest 2026, challenge CYB-03 "Explainable Deepfake & Digital Identity Manipulation Detection".
 Full strategy, judging weights, demo script: see PLAN.md. **Hard deadline: feature freeze 3:30 PM. Ship > perfect.**
 
+> ## ⚠ SCOPE LOCK (26 Sep, set by Ojas, overrides anything below)
+> **Unmask is IMAGE-ONLY, for KYC identity verification.** Input = a KYC selfie, ID-card photo or ID portrait. Output = manipulation screening + **face heatmap** + **KYC evidence report** (on screen + printable PDF).
+> - **NO video anywhere**: no `temporal.py`, no frame sampling, no blink/jitter, no `frames`/`temporal` fields, no video upload, no DFDC videos in eval. Ignore any leftover video mention in older docs.
+> - **Use case:** a KYC/onboarding desk (VSS admissions, banks, fintech onboarding) screens submitted identity photos for face swaps, AI-generated faces and edited/inpainted faces before a human approves.
+> - **ID-card scans:** the face on a card is small. `face.py` detects it and crops it (1.3x box); if the face is under 128 px, say so in limitations. The heatmap is drawn on the full uploaded image, focused on the face region.
+> - Upload accepts `image/*` only (jpg, png, webp). `media_type` is always `"image"`.
+
 ## Challenge requirements (every one must be visibly satisfied in the UI)
-1. Analyze image AND video samples for manipulation signals.
-2. Report WHERE (frame + face region heatmap) and WHY (named signal + plain reason) content is suspicious.
+1. Analyze KYC identity **images** (selfies, ID-card photos, ID portraits) for manipulation signals. Image-only: no video.
+2. Report WHERE (face-region heatmap on the image) and WHY (named signal + plain reason) content is suspicious, in an on-screen + printable **KYC evidence report**.
 3. Confidence (calibrated probability + band), failure cases, human review.
 4. Evaluate on a real-vs-manipulated sample set; report accuracy, false positives and limits.
 5. Guardrail: probabilistic only — never "fake", "proof", "guilty", "identity confirmed".
@@ -17,7 +24,7 @@ Full strategy, judging weights, demo script: see PLAN.md. **Hard deadline: featu
 backend/
   app.py              FastAPI routes, serves /static
   schemas.py          pydantic models = THE contract (mirror in frontend/src/types.ts)
-  pipeline.py         analyze_image(path) / analyze_video(path) -> AnalysisResult
+  pipeline.py         analyze_image(path) -> AnalysisResult   (image-only)
   face.py             detect face, crop (1.3x box), region masks from landmarks
   signals/
     classifier.py     S1 cf (CommunityForensics, full image) + probe (face-crop embedding) + occlusion heatmap
@@ -25,7 +32,7 @@ backend/
     fft.py            S3 frequency spectrum
     noise.py          S4 noise residual face-vs-background
     metadata.py       S5 EXIF / software tags / C2PA presence
-    temporal.py       V1 frame timeline, V2 blink rate, V3 landmark jitter
+  report.py           KYC evidence report: printable HTML for GET /api/cases/{id}/report (Yadnesh)
   fusion.py           logistic regression over [cf, probe, ela, fft, noise, metadata] (+ fallback fixed weights)
   narrator.py         LLM explanation from JSON only + template fallback
   store.py            SQLite: cases, reviews, audit log
@@ -35,7 +42,7 @@ frontend/                Vite + React app (web AND the Android webview build)
   capacitor.config.ts    appId ai.unmask.app, webDir dist, server.cleartext true
 context/  OMKAR_AI_MODELS.md · YADNESH_BACKEND.md · FRONTEND_OJAS_PALASH.md · ANDROID_APP.md
 scripts/  eval.py (→ backend/static/metrics.json), calibrate_signals.py, benchmark_models.py, fetch_data.py, download_models.py
-data/images/{real,faceswap,inpainting,text2img}/   data/videos/{real,fake}/   (local only, gitignored)
+data/images/{real,faceswap,inpainting,text2img}/   (local only, gitignored; data/videos is NOT used)
 models/   HF detector folders + face_landmarker.task (local only, gitignored)
 ```
 
@@ -80,9 +87,8 @@ A **linear probe on frozen SigLIP embeddings of MediaPipe face crops** (backbone
 - **S4 noise:** residual = img − medianBlur(img,3); compare residual std inside face mask vs background ring; large mismatch → splice/swap. Save residual heat.
 - **S5 metadata:** EXIF presence, Software tag (photoshop/gimp/stable diffusion/midjourney…), missing camera make/model, C2PA/JUMBF marker bytes. Score low-weight; reasons are text only.
 - **Regions:** from 478 landmarks build masks: left_eye, right_eye, mouth, nose, jaw_boundary (band along face oval, ±6% face width), skin (face oval minus features), background. Region suspicion = mean of S1 occlusion heat inside mask (normalized). Top region drives the headline: "Suspicion concentrated at jaw boundary — consistent with face-swap blending".
-- **Video:** sample ≤16 frames evenly (cv2), per-frame S1 score → timeline; top-3 frames get full heatmaps; blink rate via eye aspect ratio on landmarks (human ≈ 15–20/min; <5 flagged as weak indicator); landmark jitter = mean frame-to-frame landmark displacement normalized by face size. Video fused score = 0.6·mean(top-25% frames) + 0.4·temporal.
 - **Robustness:** re-run S1 after JPEG q=50 and 50% downscale; report the scores (shows stability, feeds `limitations`).
-- **Limitations list (auto):** face < 128 px, no face found, multiple faces, heavy compression (JPEG q estimate < 60), side profile (yaw large), video < 1 s, signals disagree strongly.
+- **Limitations list (auto):** face < 128 px (common on ID-card scans), no face found, multiple faces, heavy compression (JPEG q estimate < 60), side profile (yaw large), signals disagree strongly.
 
 ## Output bands & wording (use EXACTLY)
 - `< 0.35` clean → "No strong manipulation indicators found"
@@ -99,9 +105,9 @@ A **linear probe on frozen SigLIP embeddings of MediaPipe face crops** (backbone
 - **Android/LAN:** CORS `allow_origins=["*"]`, run uvicorn with `--host 0.0.0.0`, open Windows firewall TCP 8000. Every image/static path in a response is returned as a root-relative URL (`/static/...`) so the phone client can prefix its own backend base URL.
 
 ## Frontend screens
-All screens must be usable at **390 px width** (the Android app is the same build). API base URL comes from `VITE_API_BASE` (default `""` → Vite proxy on web; `http://<laptop-LAN-IP>:8000` for the APK), and every image/static URL is built through one helper that prefixes it. A Settings field (saved in `localStorage`) changes the backend URL at runtime. Upload input: `accept="image/*,video/*"` plus `capture` so the phone camera opens directly. See `context/ANDROID_APP.md`.
+All screens must be usable at **390 px width** (the Android app is the same build). API base URL comes from `VITE_API_BASE` (default `""` → Vite proxy on web; `http://<laptop-LAN-IP>:8000` for the APK), and every image/static URL is built through one helper that prefixes it. A Settings field (saved in `localStorage`) changes the backend URL at runtime. Upload input: `accept="image/*"` plus `capture` so the phone camera opens directly. See `context/ANDROID_APP.md`.
 1. **Analyze** — drag-drop, sample gallery (hero samples one-click), progress steps.
-2. **Evidence report** — band banner + gauge, original vs heatmap slider/opacity, region chips ranked, signal cards (score bar, reason, panel image), contribution bars, video frame timeline (click frame → its heatmap), narrator text, limitations, SHA-256, disclaimer, "Send to review", Print.
+2. **Evidence report (the KYC report)** — band banner + gauge, original vs heatmap slider/opacity, region chips ranked, signal cards (score bar, reason, panel image), contribution bars, narrator text, limitations, SHA-256, disclaimer, "Send to review", Print → PDF. Titled "KYC Verification Evidence Report".
 3. **Evaluation** — accuracy, precision, recall, FPR, AUC tiles; ROC curve; confusion matrix; per-subset table; robustness table; fusion vs single-signal; failure gallery with reasons.
 4. **Review queue** — cases table, decision buttons, notes, audit log.
 Design: dark, forensic-lab feel, teal accent (#14b8a6, matches CYB domain color), clean typography, no clutter.

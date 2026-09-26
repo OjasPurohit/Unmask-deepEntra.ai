@@ -6,7 +6,7 @@
 | Area | Palash (`ui`) | Ojas (`main` / `app`) |
 |---|---|---|
 | Design system | **owns** `src/theme.ts`, `src/index.css`, Tailwind config — builds these FIRST so Ojas can import them | imports, never edits |
-| Shared components | **owns** `src/components/*` (BandBanner, ScoreGauge, HeatmapViewer, RegionChips, SignalCard, ContributionBars, FrameTimeline, LimitationsList, Sha256Badge, Card, Pill, Table) | imports, never edits |
+| Shared components | **owns** `src/components/*` (BandBanner, ScoreGauge, HeatmapViewer, RegionChips, SignalCard, ContributionBars, LimitationsList, Sha256Badge, Card, Pill, Table) | imports, never edits |
 | Analyze page | **owns** `src/pages/Analyze.tsx` | — |
 | Evidence report page | **owns** `src/pages/Report.tsx` (the demo centrepiece) | — |
 | Mobile layout | **owns** responsive rules + the camera/upload flow used by the APK | — |
@@ -21,10 +21,10 @@
 
 ## Your mission in one line
 
-Make the judges **see** the "where and why": heatmaps on the face, ranked suspicious regions, named signals with reasons, a frame timeline for video, an honest evaluation dashboard, and a human review queue. Demo & presentation is 20% of the score, and the UI carries most of it.
+Make the judges **see** the "where and why": heatmaps on the face, ranked suspicious regions, named signals with reasons, an honest evaluation dashboard, and a human review queue. Demo & presentation is 20% of the score, and the UI carries most of it.
 
 ## Challenge requirements your screens must show
-1. Image AND video analysis. 2. **Where** (region heatmap, suspicious frames) and **why** (signal + reason). 3. Confidence + failure cases + human review. 4. Accuracy / false positives / limits. 5. Guardrail wording (below), never "fake" or "proof".
+1. KYC image analysis (image-only, no video). 2. **Where** (face-region heatmap) and **why** (signal + reason). 3. Confidence + failure cases + human review. 4. Accuracy / false positives / limits. 5. Guardrail wording, never "fake" or "proof". 6. A printable **KYC Verification Evidence Report**.
 
 ## Mobile / Android rules (mandatory — the APK is the same build)
 The Android app (`context/ANDROID_APP.md`) is Capacitor wrapping **this exact React build**. So these are frontend rules, not Android rules:
@@ -32,7 +32,7 @@ The Android app (`context/ANDROID_APP.md`) is Capacitor wrapping **this exact Re
 2. **One URL helper:** every image / heatmap / thumb / panel / static URL goes through `apiUrl(path)` in `src/api.ts`, which prefixes `BASE`. Never put a bare `/static/...` in an `<img src>` — it breaks inside the webview.
 3. **Settings screen:** a field to type the backend URL at runtime, saved to `localStorage['unmask_api']`. The venue IP is unknown in advance, so this is what makes the phone demo survivable.
 4. **390 px:** every page usable at 390 px width — nav collapses, heatmap viewer + opacity slider stack vertically, tables scroll inside their own `overflow-x-auto` container. (Still must look good at 1366×768 on the projector.)
-5. **Camera:** the upload input is `<input type="file" accept="image/*,video/*" capture>` so the phone opens the camera directly; keep drag-and-drop for desktop.
+5. **Camera:** the upload input is `<input type="file" accept="image/*" capture>` so the phone opens the camera directly; keep drag-and-drop for desktop.
 
 ## Stack
 
@@ -52,7 +52,7 @@ Disclaimer on every result and on the printed report: **"Probabilistic forensic 
 
 ## API (backend at :8000)
 - `POST /api/analyze` (multipart `file`) → `AnalysisResult`
-- `GET /api/samples` → `[{name, url, kind: "image"|"video", label_hint}]`
+- `GET /api/samples` → `[{name, url, kind: "image", label_hint}]`
 - `GET /api/cases` → `CaseSummary[]` · `GET /api/cases/{id}` → `AnalysisResult`
 - `POST /api/cases/{id}/review` `{decision: "agree"|"disagree"|"needs_more", note}` → `Case`
 - `GET /api/metrics` → metrics.json (shape in `context/OMKAR_AI_MODELS.md` step 3)
@@ -67,15 +67,13 @@ export interface Signal { id: "classifier"|"ela"|"fft"|"noise"|"metadata"; name:
 // S1 `classifier` carries two sub-scores in details: { cf: number, probe: number }; score = max(cf, probe).
 // Fusion contributions are keyed by feature, so "cf" and "probe" appear separately in ContributionBars.
 export interface RegionScore { region: "left_eye"|"right_eye"|"mouth"|"nose"|"jaw_boundary"|"skin"|"background"; suspicion: number }
-export interface FrameScore { t: number; score: number; thumb: string; heatmap?: string }
 export interface Review { decision: "agree"|"disagree"|"needs_more"; note: string; at: string }
 export interface AnalysisResult {
-  case_id: string; sha256: string; filename: string; media_type: "image"|"video"; created_at: string;
-  original: string;            // url of uploaded image (or a key frame for video)
+  case_id: string; sha256: string; filename: string; media_type: "image"; created_at: string;
+  original: string;            // url of the uploaded image
   overlay: string;             // url of heatmap overlay, same size as original
   fused_score: number; band: Band; headline: string;   // e.g. "Suspicion concentrated at jaw boundary"
   signals: Signal[]; regions: RegionScore[];
-  frames?: FrameScore[]; temporal?: { blink_rate_per_min: number; jitter: number; n_frames: number };
   robustness: { jpeg50: number; resize50: number };
   explanation: string; limitations: string[]; disclaimer: string;
   timings_ms: Record<string, number>; review?: Review;
@@ -84,12 +82,11 @@ export interface CaseSummary { case_id: string; filename: string; media_type: st
 ```
 
 ## Screens
-1. **Analyze** `/` — *Palash*: hero line ("Explainable manipulation forensics for identity verification"), drag-drop zone (image/video), a "Try a sample" gallery from `/api/samples`, and step progress while waiting: Detecting face → Running 5 forensic signals → Fusing evidence → Writing explanation. Then navigate to the report.
+1. **Analyze** `/` — *Palash*: hero line ("Explainable manipulation screening for KYC identity photos"), drag-drop zone (images only: jpg/png/webp; selfie, ID card or ID portrait), a "Try a sample" gallery from `/api/samples`, and step progress while waiting: Detecting face → Running 5 forensic signals → Fusing evidence → Writing explanation. Then navigate to the report.
 2. **Evidence report** `/case/:id` — *Palash*:
    - Top: BandBanner (band color + exact text) · ScoreGauge (fused score %) · headline · SHA-256 badge (truncated, copy button) · filename/time.
    - Left: **HeatmapViewer** showing the original with the overlay on top, an opacity slider (default 60%) and a side-by-side toggle.
    - Right: **RegionChips** ranked by suspicion (colored bars) · **SignalCards** (name, score bar, reason, click to expand the panel image + details; show "signal unavailable" if `ok=false`) · **ContributionBars** (how much each signal moved the score).
-   - Video only: **FrameTimeline** (Recharts line of score vs t; clicking a point swaps the viewer to that frame's heatmap) + temporal stats.
    - Bottom: Explanation text · Robustness ("score after JPEG compression / downscale") · Limitations list · Disclaimer · **ReviewPanel** (3 buttons + note) · Print button.
    - A `@media print` stylesheet so browser Print → PDF gives a clean one-page evidence report.
 3. **Evaluation** `/evaluation` — *Ojas* (from `/api/metrics`): metric tiles (Accuracy, Precision, Recall, **False positive rate** highlighted, AUC) · ROC curve · confusion matrix (2×2 grid) · per-subset table · per-signal AUC bars (shows fused > single) · robustness table · **Failure gallery** (image + label + score + reason) · limitations · dataset source note.
@@ -100,7 +97,7 @@ export interface CaseSummary { case_id: string; filename: string; media_type: st
 Dark forensic-lab look: background `#0b1220`, cards `#111a2e` with 1px `#1f2a44` borders, teal accent `#14b8a6` (the CYB domain color), Inter font, generous spacing. Top nav: Analyze · Review queue · Evaluation · Settings · a small "Human-in-the-loop · Probabilistic" pill. Must look good at **1366×768** (projector) **and at 390 px** (the Android app). No lorem ipsum: the mock data should look real.
 
 ## `src/mock.json`
-Build a realistic **strong-band face-swap** result: fused_score 0.82, headline "Suspicion concentrated at jaw boundary — consistent with face-swap blending", 5 signals (classifier 0.88 with `details: {cf: 0.42, probe: 0.88}`, ela 0.64, fft 0.41, noise 0.71, metadata 0.2 with "No camera EXIF; re-encoded"), 7 regions (jaw_boundary highest), 8 frames with a spike at t=2.5, 3 limitations. Put placeholder images in `public/mock/`. Also add a mock metrics.json using the shape in OMKAR_AI_MODELS.md.
+Build a realistic **strong-band face-swap** result: fused_score 0.82, headline "Suspicion concentrated at jaw boundary — consistent with face-swap blending", 5 signals (classifier 0.88 with `details: {cf: 0.42, probe: 0.88}`, ela 0.64, fft 0.41, noise 0.71, metadata 0.2 with "No camera EXIF; re-encoded"), 7 regions (jaw_boundary highest), 3 limitations. Put placeholder images in `public/mock/`. Also add a mock metrics.json using the shape in OMKAR_AI_MODELS.md.
 
 ## Checkpoints
 **1:45** all screens on mock (Palash: Analyze + Report; Ojas: Evaluation + Review + shell) · **2:00** Palash confirms the 390 px layout and the capture input so Ojas can start the APK · **2:15** switched to the live API (`VITE_MOCK=0`) · **2:45** APK built from the merged build · **3:15** polish + print view. Never block on the backend: if a field is missing, render "—".

@@ -20,7 +20,7 @@ Own the **detection core and the numbers**: find the face, run S1 (`cf` + `probe
 
 ## Data (local only, gitignored; get it from the pen drive or run `scripts/fetch_data.py`)
 - `data/images/real` (350, Wikipedia portraits, varied sizes), `faceswap` / `inpainting` / `text2img` (100 each, all 512×512). Source: OpenRL/DeepFakeFace.
-- `data/videos/real`, `data/videos/fake` (10 each, DFDC sample).
+- Videos are **out of scope** (image-only KYC). Ignore `data/videos/`.
 - MediaPipe finds faces in ~70% of images; images with no face are reported as "no face found" (a limitation), not silently dropped from the counts.
 
 ## ⚠ Leakage guard (judges may ask, so be ready to answer)
@@ -36,7 +36,7 @@ Fakes are all 512², reals vary. **Always face-crop (1.3× landmark box) → res
    - `probe` = `models/probe.joblib` on the frozen **haywoodsloan SwinV2 backbone** embedding of the 224² face crop (switch to SigLIP or the two concatenated only if that wins on the train split, task 5).
    - Put both in `Signal.details` as `{"cf": …, "probe": …}`; they enter fusion as **two separate features**. The score shown in the UI is `max(cf, probe)`.
    - **Occlusion heatmap** on whichever sub-score is higher: 7×7 grid, patch filled with the image-mean color, heat = `max(0, p_base − p_occluded)`, all 49 crops batched in **one** forward pass. Upsample, blur, JET colormap, alpha-blend 45%. Save the overlay png.
-   - Also expose `predict_batch(list[img]) -> list[float]` — Yadnesh's video timeline and your robustness run both call it.
+   - Also expose `predict_batch(list[img]) -> list[float]` — your robustness run and eval.py call it.
    - Load every model once at startup, `local_files_only=True`, GPU if available. Target < 2 s/image on GPU, < 8 s on CPU.
 3. **`region_scores(heat, masks) -> list[RegionScore]` + headline** — region suspicion = normalized mean occlusion heat inside each mask, sorted. Top region drives the headline sentence, e.g. *"Suspicion concentrated at jaw boundary — consistent with face-swap blending"*. This one sentence is the centrepiece of the demo; make it read well.
 
@@ -55,7 +55,6 @@ Fakes are all 512², reals vary. **Always face-crop (1.3× landmark box) → res
   "per_subset": [{"subset":"faceswap","auc":0.87,"recall":0.78,"n":22}],
   "per_signal_auc": [{"signal":"cf","auc":0.88},{"signal":"probe","auc":0.90},{"signal":"ela","auc":0.61},{"signal":"fused","auc":0.93}],
   "robustness": [{"condition":"original","auc":0.90},{"condition":"jpeg_q50","auc":0.84},{"condition":"resize_50","auc":0.80}],
-  "video": {"n":20,"accuracy":0.7,"auc":0.75},
   "failures": [{"path":"/static/failures/f1.jpg","label":"real","score":0.81,"reason":"Heavy JPEG compression and low-resolution face (<128 px)"}],
   "ood_check": {"name":"team selfies","n":8,"flagged":1},
   "limitations": ["..."]
@@ -64,10 +63,10 @@ Fakes are all 512², reals vary. **Always face-crop (1.3× landmark box) → res
 7. **`backend/fusion.py`**: LogisticRegression over signal scores `[cf, probe, ela, fft, noise, metadata]` (S1 contributes **two** features), fit on the train split. `fuse(scores) -> (prob, contributions{signal: coef*x})`. If `models/fusion.json` is missing, fall back to fixed weights. Bands: <0.35 clean, 0.35–0.70 inconclusive, >0.70 strong.
 8. **Robustness**: re-embed the test split after JPEG q=50 and 50% downscale → AUC per condition.
 9. **Failure gallery**: the 6 worst test errors, copied to `backend/static/failures/`, each with an auto-generated reason (small face, low JPEG quality, profile pose, signals disagree).
-10. **Hero samples**: copy 2 real, 2 face-swap, 1 inpainting, 1 text2img, 1 fake video and 1 known failure into `backend/static/samples/` for the demo.
+10. **Hero samples**: copy 2 real, 2 face-swap, 1 inpainting, 1 text2img, 1 known failure into `backend/static/samples/` for the demo.
 
 ## Interfaces you depend on / provide
-- **You depend on:** `backend/schemas.py` (Ojas) for `Signal`/`RegionScore`, and Yadnesh's `backend/signals/{ela,fft,noise,metadata,temporal}.py` — same `run(img_rgb, face, case_dir) -> Signal` contract. Until they merge, fuse `cf` + `probe` alone.
+- **You depend on:** `backend/schemas.py` (Ojas) for `Signal`/`RegionScore`, and Yadnesh's `backend/signals/{ela,fft,noise,metadataal}.py` — same `run(img_rgb, face, case_dir) -> Signal` contract. Until they merge, fuse `cf` + `probe` alone.
 - **You provide:** `backend/face.py` (`detect(img) -> FaceInfo | None`), `backend/signals/classifier.py` (`run(...)`, `predict_batch(imgs) -> list[float]`, `region_scores(heat, masks)`), `backend/fusion.py`, `models/probe.joblib`, `models/fusion.json`, `backend/static/metrics.json`. Yadnesh stubs `face.detect` and `classifier.predict_batch` until you merge — keep those two signatures stable.
 
 ## Files you own (nobody else edits them)

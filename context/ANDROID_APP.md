@@ -32,7 +32,7 @@ Also set `android:usesCleartextTraffic="true"` on `<application>` in `android/ap
 2. **One URL helper.** Every image/static/heatmap/thumb URL goes through `apiUrl(path)` which prefixes `BASE`. Never hard-code `/static/...` into an `<img src>`.
 3. **Settings field.** A Settings screen (or a gear in the nav) lets the user type the backend URL at runtime; it is saved to `localStorage` under `unmask_api`. The venue IP is unknown in advance — this is the single most important mobile feature.
 4. **390 px.** Every page must be usable at 390 px width: nav collapses, the heatmap viewer and its opacity slider stack vertically, tables scroll horizontally inside their own container.
-5. **Camera.** The upload input is `<input type="file" accept="image/*,video/*" capture>` so the phone opens the camera directly; keep drag-and-drop for desktop.
+5. **Camera.** The upload input is `<input type="file" accept="image/*" capture>` so the phone opens the camera directly; keep drag-and-drop for desktop.
 
 ## Backend requirements (Ojas, in `backend/app.py`)
 - `CORSMiddleware` with `allow_origins=["*"]`, all methods and headers (the webview origin is `http://localhost` / `capacitor://`, not our host).
