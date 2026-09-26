@@ -26,3 +26,15 @@ powershell -ExecutionPolicy Bypass -File scripts\setup.ps1      # add -Gpu for N
 .venv\Scripts\python scripts\fetch_data.py                      # eval data (or copy data\ from the pen drive)
 ```
 Models (~5 GB) and data are not committed; `scripts/download_models.py` and `scripts/fetch_data.py` recreate them.
+
+## Run
+```powershell
+# backend (http://localhost:8000, reachable over LAN for the phone)
+.venv\Scripts\python -m uvicorn backend.app:app --host 0.0.0.0 --port 8000 --reload
+# frontend (http://localhost:5173, proxies /api and /static to :8000)
+cd frontend; npm i; npm run dev
+# frontend on mock data, no backend needed
+cd frontend; $env:VITE_MOCK="1"; npm run dev
+```
+Smoke test: `curl localhost:8000/api/health` · `curl -F "file=@selfie.jpg;type=image/jpeg" localhost:8000/api/analyze`.
+The stubs in `backend/face.py`, `backend/signals/*.py`, `fusion.py`, `narrator.py` and `report.py` return plausible data; each owner replaces their own module while keeping the `run(img_rgb, face, case_dir) -> Signal` signature.

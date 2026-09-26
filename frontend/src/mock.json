@@ -1,0 +1,46 @@
+{
+  "case_id": "mock-7f3a2c",
+  "sha256": "3b1f9e0c7a52d4e8b6f1a09c2d7e5b3a8f4c6d1e9b0a7c3f5e2d8b4a6c1f0e97",
+  "filename": "applicant_selfie_0412.jpg",
+  "media_type": "image",
+  "created_at": "2026-09-26T10:42:18Z",
+  "original": "/mock/selfie.svg",
+  "overlay": "/mock/selfie_overlay.svg",
+  "fused_score": 0.82,
+  "band": "strong",
+  "headline": "Suspicion concentrated at jaw boundary — consistent with face-swap blending",
+  "signals": [
+    {"id": "classifier", "name": "Deepfake classifier (cf + face probe)", "score": 0.88, "weight": 4.5, "contribution": 3.04,
+     "reason": "Face-crop probe scores 0.88 (face-swap pattern); full-image detector scores 0.42.",
+     "heatmap": "/mock/selfie_overlay.svg", "details": {"cf": 0.42, "probe": 0.88}, "ok": true},
+    {"id": "ela", "name": "Error level analysis", "score": 0.64, "weight": 1.0, "contribution": 0.64,
+     "reason": "Face region re-compresses 2.1x more strongly than the background.", "panel": "/mock/panel.svg",
+     "details": {"face_ela": 11.8, "bg_ela": 5.6, "ratio": 2.1}, "ok": true},
+    {"id": "fft", "name": "Frequency spectrum", "score": 0.41, "weight": 0.6, "contribution": 0.25,
+     "reason": "High-frequency energy 12% above the real-photo baseline; no periodic GAN peaks.", "panel": "/mock/panel.svg",
+     "details": {"hf_ratio": 0.23, "peaks": 0}, "ok": true},
+    {"id": "noise", "name": "Noise residual", "score": 0.71, "weight": 1.2, "contribution": 0.85,
+     "reason": "Face noise level differs from the background ring by 58%.", "panel": "/mock/panel.svg",
+     "details": {"face_std": 2.9, "bg_std": 4.6}, "ok": true},
+    {"id": "metadata", "name": "Metadata & provenance", "score": 0.2, "weight": 0.3, "contribution": 0.06,
+     "reason": "No camera EXIF; re-encoded.", "details": {"exif": false, "software": null, "c2pa": false}, "ok": true}
+  ],
+  "regions": [
+    {"region": "jaw_boundary", "suspicion": 0.81},
+    {"region": "mouth", "suspicion": 0.55},
+    {"region": "left_eye", "suspicion": 0.38},
+    {"region": "right_eye", "suspicion": 0.35},
+    {"region": "nose", "suspicion": 0.3},
+    {"region": "skin", "suspicion": 0.27},
+    {"region": "background", "suspicion": 0.12}
+  ],
+  "robustness": {"jpeg50": 0.79, "resize50": 0.74},
+  "explanation": "The strongest indicators sit along the jaw boundary, where the face-crop probe and the noise residual both show a mismatch between the face and its surroundings. This pattern is consistent with face-swap blending. Frequency and metadata signals are weak. These are probabilistic indicators; a human reviewer makes the final decision.",
+  "limitations": [
+    "Trained/evaluated on DeepFakeFace; real and fake images come from different sources, so part of the signal may be source/compression domain.",
+    "Image was re-encoded (no camera EXIF), which can raise ELA and noise scores on genuine photos.",
+    "Face-swap detection is the weakest subset (probe AUC 0.87); inpainted or generated faces are caught more reliably."
+  ],
+  "disclaimer": "Probabilistic forensic indicators only. Not proof of identity, authenticity or wrongdoing. Final decision rests with a human reviewer.",
+  "timings_ms": {"face": 41, "classifier": 912, "ela": 38, "fft": 22, "noise": 31, "metadata": 4, "overlay": 17}
+}

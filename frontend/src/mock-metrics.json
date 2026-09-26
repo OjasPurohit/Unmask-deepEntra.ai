@@ -1,0 +1,13 @@
+{
+  "dataset": {"real": 239, "manipulated": 238, "subsets": ["faceswap", "inpainting", "text2img"], "source": "OpenRL/DeepFakeFace", "test_split": 0.3},
+  "threshold": 0.62,
+  "overall": {"accuracy": 0.85, "precision": 0.84, "recall": 0.81, "fpr": 0.09, "fnr": 0.19, "auc": 0.9},
+  "confusion": {"tp": 58, "fp": 6, "tn": 66, "fn": 13},
+  "roc": [{"fpr": 0.0, "tpr": 0.0}, {"fpr": 0.05, "tpr": 0.58}, {"fpr": 0.1, "tpr": 0.72}, {"fpr": 0.2, "tpr": 0.84}, {"fpr": 0.4, "tpr": 0.93}, {"fpr": 1.0, "tpr": 1.0}],
+  "per_subset": [{"subset": "faceswap", "auc": 0.87, "recall": 0.78, "n": 22}, {"subset": "inpainting", "auc": 0.97, "recall": 0.91, "n": 24}, {"subset": "text2img", "auc": 0.99, "recall": 0.96, "n": 25}],
+  "per_signal_auc": [{"signal": "cf", "auc": 0.88}, {"signal": "probe", "auc": 0.9}, {"signal": "ela", "auc": 0.61}, {"signal": "fft", "auc": 0.57}, {"signal": "noise", "auc": 0.63}, {"signal": "metadata", "auc": 0.52}, {"signal": "fused", "auc": 0.93}],
+  "robustness": [{"condition": "original", "auc": 0.9}, {"condition": "jpeg_q50", "auc": 0.84}, {"condition": "resize_50", "auc": 0.8}],
+  "failures": [{"path": "/mock/selfie.svg", "label": "real", "score": 0.81, "reason": "Heavy JPEG compression and low-resolution face (<128 px)"}],
+  "ood_check": {"name": "team selfies", "n": 8, "flagged": 1},
+  "limitations": ["Real and fake images come from different sources; part of the signal may be source/compression domain."]
+}
