@@ -1,4 +1,4 @@
-# VERITAS LENS — Explainable Deepfake & Identity Manipulation Forensics
+# UNMASK — Explainable Deepfake & Identity Manipulation Forensics
 deepEntra Build Fest 2026 · CYB-03 · Build window 12:15 → 3:30 PM (3h15m real)
 
 ## 0. How we win (read the scorecard, not the problem statement)
@@ -141,7 +141,7 @@ Down a person: Omkar absorbs Yadnesh's S4/S5, Ojas absorbs the video pipeline. D
 2. (35s) Genuine photo → "No strong indicators", every signal green. Shows we don't cry wolf.
 3. (55s) Face-swap → heatmap lights up jawline/face boundary, region chips, ELA + FFT panels, narrator explains in plain English, SHA-256 on report.
 4. (35s) Video → frame timeline with spikes, click spike → heatmap of that frame, low blink rate noted.
-5. (30s) **Phone app** → "a VSS admissions officer verifies an applicant photo from a phone": open the Veritas Lens APK, tap upload / camera, the band banner and heatmap appear on the phone, and the case lands in the review queue on the projector. Say the line: *"the models never leave the verification machine — the phone is just a secure client."*
+5. (30s) **Phone app** → "a VSS admissions officer verifies an applicant photo from a phone": open the Unmask APK, tap upload / camera, the band banner and heatmap appear on the phone, and the case lands in the review queue on the projector. Say the line: *"the models never leave the verification machine — the phone is just a secure client."*
 6. (45s) Eval dashboard → real numbers, FPR, per-subset table, the "combining helps" table (`cf` vs `probe` vs fused), **the failure case** → "this is exactly why the system never decides; it routes to a human".
 7. (20s) Review queue → reviewer disagrees, adds note, audit log. Close: guardrails + next step (pilot at VSS admissions desk; more training data; C2PA provenance).
 

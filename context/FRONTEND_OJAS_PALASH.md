@@ -1,4 +1,4 @@
-# Context: FRONTEND — Ojas + Palash · Veritas Lens (CYB-03)
+# Context: FRONTEND — Ojas + Palash · Unmask (CYB-03)
 > Paste into Antigravity as context (or @-mention this file). Also skim ../PLAN.md §0 and §6 (the demo script) and `ANDROID_APP.md`.
 > Branches: **`ui`** (Palash) · **`main`** (Ojas, scaffold + merges) · **`app`** (Ojas, Android).
 
@@ -28,9 +28,9 @@ Make the judges **see** the "where and why": heatmaps on the face, ranked suspic
 
 ## Mobile / Android rules (mandatory — the APK is the same build)
 The Android app (`context/ANDROID_APP.md`) is Capacitor wrapping **this exact React build**. So these are frontend rules, not Android rules:
-1. **One API base:** `const BASE = localStorage.getItem('veritas_api') ?? import.meta.env.VITE_API_BASE ?? ''`. Default `''` → the Vite proxy serves the web build. The APK build sets `VITE_API_BASE=http://<laptop-LAN-IP>:8000`.
+1. **One API base:** `const BASE = localStorage.getItem('unmask_api') ?? import.meta.env.VITE_API_BASE ?? ''`. Default `''` → the Vite proxy serves the web build. The APK build sets `VITE_API_BASE=http://<laptop-LAN-IP>:8000`.
 2. **One URL helper:** every image / heatmap / thumb / panel / static URL goes through `apiUrl(path)` in `src/api.ts`, which prefixes `BASE`. Never put a bare `/static/...` in an `<img src>` — it breaks inside the webview.
-3. **Settings screen:** a field to type the backend URL at runtime, saved to `localStorage['veritas_api']`. The venue IP is unknown in advance, so this is what makes the phone demo survivable.
+3. **Settings screen:** a field to type the backend URL at runtime, saved to `localStorage['unmask_api']`. The venue IP is unknown in advance, so this is what makes the phone demo survivable.
 4. **390 px:** every page usable at 390 px width — nav collapses, heatmap viewer + opacity slider stack vertically, tables scroll inside their own `overflow-x-auto` container. (Still must look good at 1366×768 on the projector.)
 5. **Camera:** the upload input is `<input type="file" accept="image/*,video/*" capture>` so the phone opens the camera directly; keep drag-and-drop for desktop.
 

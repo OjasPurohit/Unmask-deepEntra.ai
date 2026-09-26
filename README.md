@@ -1,4 +1,4 @@
-# Veritas Lens — Explainable Deepfake & Identity Manipulation Forensics
+# Unmask — Explainable Deepfake & Identity Manipulation Forensics
 **deepEntra Build Fest 2026 · CYB-03 · Team Masons**
 
 A multi-signal forensic system that analyzes image/video samples for manipulation and reports **where** (face-region heatmaps, suspicious frames) and **why** (named forensic signals with measured reasons), with calibrated confidence, an honest evaluation (accuracy, false positives, failure cases) and a human review queue. Runs in the browser and as an **Android app** (Capacitor wrapping the same build; the models stay on the verification machine).

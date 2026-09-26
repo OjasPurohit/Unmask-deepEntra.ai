@@ -1,4 +1,4 @@
-# Veritas Lens: the whole project explained from zero
+# Unmask: the whole project explained from zero
 
 This document assumes you know nothing. Read it top to bottom once and you'll understand the event, the problem, our solution, every technical idea behind it, what's already done, and exactly what happens today.
 
@@ -7,7 +7,7 @@ This document assumes you know nothing. Read it top to bottom once and you'll un
 ## 1. The 30-second version
 - **Event:** deepEntra Build Fest 2026, a one-day AI hackathon in Pune (26 Sep 2026). Teams of 2–4 pick a problem, build a working AI prototype in about 3 hours, and demo it to judges.
 - **Our problem (CYB-03):** detect whether a photo or video of a person has been manipulated (deepfakes, face swaps, AI-generated faces), and **explain where and why** it looks suspicious, with honest confidence levels and a human making the final call.
-- **Our product:** **Veritas Lens**, in the browser and as an Android app. You upload a photo or video. It runs several independent "forensic tests", paints a heatmap over the suspicious part of the face, explains in plain English what it found, gives a confidence level, and sends the case to a human reviewer. It also has a scoreboard page showing how accurate it is, including where it fails.
+- **Our product:** **Unmask**, in the browser and as an Android app. You upload a photo or video. It runs several independent "forensic tests", paints a heatmap over the suspicious part of the face, explains in plain English what it found, gives a confidence level, and sends the case to a human reviewer. It also has a scoreboard page showing how accurate it is, including where it fails.
 - **Why we can win:** most teams will show "a model that says 87% fake". We show *where* on the face, *why*, *how sure*, *how often we're wrong*, and *who decides*. That matches every line of the problem statement and every scoring criterion.
 
 ---
@@ -76,7 +76,7 @@ Videos can have all of these, frame by frame.
 | "Report accuracy, false positives & limits" | The evaluation dashboard: accuracy, false-positive rate, per-type results, robustness, limitations. |
 
 ### 3.3 Why this matters for VSS
-VSS admits students through applications, documents and interviews. A face-swapped ID photo or an AI-generated applicant photo undermines that process. Veritas Lens is a **screening assistant** for the admissions desk: it flags content that deserves a closer look. It never accuses anyone. A person always decides.
+VSS admits students through applications, documents and interviews. A face-swapped ID photo or an AI-generated applicant photo undermines that process. Unmask is a **screening assistant** for the admissions desk: it flags content that deserves a closer look. It never accuses anyone. A person always decides.
 
 ---
 
@@ -98,7 +98,7 @@ VSS admits students through applications, documents and interviews. A face-swapp
 5. **Settings:** one field to point the app at the verification machine (the laptop running the models). Only really needed on the phone, where the network address changes with the venue.
 
 ### 4.1 The phone app
-The same product also installs on an **Android phone** as an app called Veritas Lens. It is not a second app: a tool called **Capacitor** wraps the exact same React build into an APK. An admissions officer can photograph or pick an applicant photo on the phone and get the same evidence report.
+The same product also installs on an **Android phone** as an app called Unmask. It is not a second app: a tool called **Capacitor** wraps the exact same React build into an APK. An admissions officer can photograph or pick an applicant photo on the phone and get the same evidence report.
 
 **The AI does not run on the phone.** The phone sends the file to the verification laptop over the local Wi-Fi (or the phone's own hotspot), the laptop runs the models and sends back the result. That keeps the ~5 GB of models and the case database on one controlled machine, keeps the phone fast, and means the audit trail lives in one place. Details: `context/ANDROID_APP.md`.
 
@@ -223,7 +223,7 @@ Cases go into a queue. A reviewer clicks agree / disagree / needs more evidence 
 **Finding 4: leakage trap, avoided.** In this dataset every manipulated image is exactly 512×512 while real ones vary in size, so a lazy model could learn "512×512 = manipulated" and look brilliant while being useless. We always crop the face and resize before the AI sees it, and we say so openly in the limitations. Judges respect this kind of honesty.
 
 ### 7.4 Team setup (GitHub repo)
-- Repo: https://github.com/OjasPurohit/DeepEntra-Build-Fest-Masons-CYB-03
+- Repo: https://github.com/OjasPurohit/Unmask-deepEntra.ai
 - `TEAM_SETUP.md`: one-line install for teammates, GitHub login steps, and the Android toolchain (JDK 21 + Android Studio) that Ojas and Palash install before the event.
 - One briefing file per person, so each agent gets exactly the context its owner needs:
   - `context/OMKAR_AI_MODELS.md` — Omkar: face detection, S1 (`cf` + `probe`), occlusion heatmap, probe training, fusion, evaluation.
@@ -298,7 +298,7 @@ Down a person: Omkar absorbs the noise and metadata signals, Ojas absorbs the vi
 2. **Real photo (35 s):** green, every signal calm. "We don't cry wolf."
 3. **Face swap (55 s):** red, heatmap on the jawline, region chips, ELA and frequency panels, plain-English explanation, SHA-256.
 4. **Video (35 s):** the timeline spikes; click the spike to see that frame's heatmap; low blink rate noted.
-5. **Phone (30 s):** "a VSS admissions officer verifies an applicant photo from a phone" — open the Veritas Lens app, upload or photograph, the band and heatmap appear on the phone, and the case lands in the review queue on the projector. Say the line: *the models never leave the verification machine; the phone is just a secure client.*
+5. **Phone (30 s):** "a VSS admissions officer verifies an applicant photo from a phone" — open the Unmask app, upload or photograph, the band and heatmap appear on the phone, and the case lands in the review queue on the projector. Say the line: *the models never leave the verification machine; the phone is just a secure client.*
 6. **Evaluation (45 s):** real numbers, false-positive rate, the "combining helps" table, and **a case we get wrong**: "this is exactly why the system never decides alone."
 7. **Review (20 s):** the reviewer disagrees and adds a note; the audit log records it. Close with the guardrails and the next step: a pilot at the VSS admissions desk.
 

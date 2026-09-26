@@ -1,23 +1,23 @@
-# Context: ANDROID APP — Veritas Lens (CYB-03)
+# Context: ANDROID APP — Unmask (CYB-03)
 > Owners: **Ojas** (Capacitor config, build, backend/LAN wiring, APK) + **Palash** (mobile-responsive UI, camera/upload flow).
 > Also read ../CLAUDE.md, ../PLAN.md §3 and `FRONTEND_OJAS_PALASH.md`.
 
 ## Mission in one line
-Put Veritas Lens **on a phone** — an admissions officer photographs or picks an applicant photo and gets the same evidence report — **without writing a second app**.
+Put Unmask **on a phone** — an admissions officer photographs or picks an applicant photo and gets the same evidence report — **without writing a second app**.
 
 ## Approach: Capacitor wrapping the same React build
 No separate native codebase. Capacitor packages the existing `frontend/dist` into an Android webview APK.
 ```bash
 cd frontend
 npm i @capacitor/core @capacitor/cli @capacitor/android
-npx cap init "Veritas Lens" ai.veritaslens.app --web-dir dist
+npx cap init "Unmask" ai.unmask.app --web-dir dist
 ```
 `capacitor.config.ts`:
 ```ts
 import type { CapacitorConfig } from '@capacitor/cli';
 const config: CapacitorConfig = {
-  appId: 'ai.veritaslens.app',
-  appName: 'Veritas Lens',
+  appId: 'ai.unmask.app',
+  appName: 'Unmask',
   webDir: 'dist',
   server: { cleartext: true },   // backend is plain http on the LAN
 };
@@ -28,9 +28,9 @@ Also set `android:usesCleartextTraffic="true"` on `<application>` in `android/ap
 **The models never run on the phone.** They stay on the verification laptop; the phone is a client that POSTs the file to the FastAPI backend over LAN / phone hotspot and renders the JSON result.
 
 ## Frontend rules this depends on (Palash + Ojas, also listed in `FRONTEND_OJAS_PALASH.md`)
-1. **One API base.** `const BASE = localStorage.getItem('veritas_api') ?? import.meta.env.VITE_API_BASE ?? ''`. Default `''` → the Vite proxy handles the web build. The APK build sets `VITE_API_BASE=http://<laptop-LAN-IP>:8000`.
+1. **One API base.** `const BASE = localStorage.getItem('unmask_api') ?? import.meta.env.VITE_API_BASE ?? ''`. Default `''` → the Vite proxy handles the web build. The APK build sets `VITE_API_BASE=http://<laptop-LAN-IP>:8000`.
 2. **One URL helper.** Every image/static/heatmap/thumb URL goes through `apiUrl(path)` which prefixes `BASE`. Never hard-code `/static/...` into an `<img src>`.
-3. **Settings field.** A Settings screen (or a gear in the nav) lets the user type the backend URL at runtime; it is saved to `localStorage` under `veritas_api`. The venue IP is unknown in advance — this is the single most important mobile feature.
+3. **Settings field.** A Settings screen (or a gear in the nav) lets the user type the backend URL at runtime; it is saved to `localStorage` under `unmask_api`. The venue IP is unknown in advance — this is the single most important mobile feature.
 4. **390 px.** Every page must be usable at 390 px width: nav collapses, the heatmap viewer and its opacity slider stack vertically, tables scroll horizontally inside their own container.
 5. **Camera.** The upload input is `<input type="file" accept="image/*,video/*" capture>` so the phone opens the camera directly; keep drag-and-drop for desktop.
 
@@ -38,7 +38,7 @@ Also set `android:usesCleartextTraffic="true"` on `<application>` in `android/ap
 - `CORSMiddleware` with `allow_origins=["*"]`, all methods and headers (the webview origin is `http://localhost` / `capacitor://`, not our host).
 - Run uvicorn as `.venv\Scripts\uvicorn backend.app:app --host 0.0.0.0 --port 8000`.
 - Open the Windows firewall once:
-  `New-NetFirewallRule -DisplayName "Veritas 8000" -Direction Inbound -LocalPort 8000 -Protocol TCP -Action Allow`
+  `New-NetFirewallRule -DisplayName "Unmask 8000" -Direction Inbound -LocalPort 8000 -Protocol TCP -Action Allow`
 - Find the LAN IP with `ipconfig` (Wi-Fi IPv4, e.g. `192.168.1.23`). Phone and laptop must be on the same Wi-Fi or the laptop on the phone's hotspot.
 
 ## Build steps

@@ -9,7 +9,7 @@ Close and reopen PowerShell after it finishes (so PATH updates).
 ## 2. Connect GitHub + clone
 ```powershell
 gh auth login --web --git-protocol https; gh auth setup-git; git config --global user.name "YOUR NAME"; git config --global user.email "YOUR_GITHUB_EMAIL"
-gh repo clone OjasPurohit/DeepEntra-Build-Fest-Masons-CYB-03 C:\Work\veritas-lens; cd C:\Work\veritas-lens
+gh repo clone OjasPurohit/Unmask-deepEntra.ai C:\Work\unmask; cd C:\Work\unmask
 ```
 Open that folder in Antigravity (File → Open Folder). Its Source Control panel uses the same git login.
 

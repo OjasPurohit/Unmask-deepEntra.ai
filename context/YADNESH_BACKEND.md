@@ -1,4 +1,4 @@
-# Context: BACKEND + ML — Yadnesh · Veritas Lens (CYB-03)
+# Context: BACKEND + ML — Yadnesh · Unmask (CYB-03)
 > Paste into Antigravity as context (or @-mention this file). Also read ../CLAUDE.md and ../PLAN.md.
 > Branch: **`backend`**. Merge into `main` at 1:45 / 2:45 / 3:15.
 

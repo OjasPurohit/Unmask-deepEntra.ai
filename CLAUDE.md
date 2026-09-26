@@ -1,4 +1,4 @@
-# Veritas Lens — project context for coding agents (Claude Code / Antigravity)
+# Unmask — project context for coding agents (Claude Code / Antigravity)
 Hackathon: deepEntra Build Fest 2026, challenge CYB-03 "Explainable Deepfake & Digital Identity Manipulation Detection".
 Full strategy, judging weights, demo script: see PLAN.md. **Hard deadline: feature freeze 3:30 PM. Ship > perfect.**
 
@@ -12,7 +12,7 @@ Full strategy, judging weights, demo script: see PLAN.md. **Hard deadline: featu
 ## Stack & layout
 - Python 3.12 venv at `.venv` (run with `.venv/Scripts/python`), FastAPI + uvicorn, torch (CUDA if available, else CPU), transformers, mediapipe **tasks API** (`mediapipe.tasks.python.vision.FaceLandmarker`, model `models/face_landmarker.task`; the legacy `mp.solutions` API is NOT available in mediapipe 1.x), OpenCV, scikit-learn.
 - Frontend: Vite + React + TypeScript + Tailwind + Recharts in `frontend/`. Proxy `/api` → `http://localhost:8000`.
-- Android: **Capacitor** wraps the SAME React build into an APK (appId `ai.veritaslens.app`, webDir `dist`). No separate native codebase; the phone is a thin client calling the FastAPI backend over LAN. Spec: `context/ANDROID_APP.md`.
+- Android: **Capacitor** wraps the SAME React build into an APK (appId `ai.unmask.app`, webDir `dist`). No separate native codebase; the phone is a thin client calling the FastAPI backend over LAN. Spec: `context/ANDROID_APP.md`.
 ```
 backend/
   app.py              FastAPI routes, serves /static
@@ -32,7 +32,7 @@ backend/
   static/cases/<case_id>/*.png   generated heatmaps/panels
 frontend/                Vite + React app (web AND the Android webview build)
   android/               Capacitor-generated Android project (created by `npx cap add android`)
-  capacitor.config.ts    appId ai.veritaslens.app, webDir dist, server.cleartext true
+  capacitor.config.ts    appId ai.unmask.app, webDir dist, server.cleartext true
 context/  OMKAR_AI_MODELS.md · YADNESH_BACKEND.md · FRONTEND_OJAS_PALASH.md · ANDROID_APP.md
 scripts/  eval.py (→ backend/static/metrics.json), calibrate_signals.py, benchmark_models.py, fetch_data.py, download_models.py
 data/images/{real,faceswap,inpainting,text2img}/   data/videos/{real,fake}/   (local only, gitignored)

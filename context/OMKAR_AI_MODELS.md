@@ -1,4 +1,4 @@
-# Context: AI MODELS — Omkar · Veritas Lens (CYB-03)
+# Context: AI MODELS — Omkar · Unmask (CYB-03)
 > Paste into Antigravity as context (or @-mention this file). Also read ../CLAUDE.md and ../PLAN.md.
 > Branch: **`models`**. Merge into `main` at 1:45 / 2:45 / 3:15.
 
